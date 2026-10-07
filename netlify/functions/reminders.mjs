@@ -42,29 +42,9 @@ function normalizeInitData(raw) {
 
 function botSyncAuthorized(req) {
   const token = req.headers.get('x-bot-sync') || '';
-  const legacyToken = req.headers.get('x-bot-sync-legacy') || '';
-  const syncSecret = process.env.MINIAPP_SYNC_SECRET || '';
   const botToken = process.env.BOT_TOKEN || '';
-
-  // Preferred auth: dedicated MINIAPP_SYNC_SECRET.
-  if (syncSecret && token) {
-    const expected = crypto.createHash('sha256').update(`${syncSecret}|notes-mini-sync`).digest('hex');
-    if (token.length === expected.length &&
-        crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expected))) {
-      return true;
-    }
-  }
-
-  // Backward-compatible auth: existing BOT_TOKEN env.
-  if (botToken && legacyToken) {
-    const expectedLegacy = crypto.createHash('sha256').update(`${botToken}|notes-mini-sync`).digest('hex');
-    if (legacyToken.length === expectedLegacy.length &&
-        crypto.timingSafeEqual(Buffer.from(legacyToken), Buffer.from(expectedLegacy))) {
-      return true;
-    }
-  }
-
-  return false;
+  const expected = crypto.createHash('sha256').update(`${botToken}|notes-mini-sync`).digest('hex');
+  return Boolean(botToken && token && crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expected)));
 }
 
 async function readAll() {

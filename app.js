@@ -101,49 +101,17 @@
 
   // Список напоминаний хранится на сервере по Telegram user_id.
   // localStorage используется только как быстрый кэш до ответа API.
-  const REMINDER_CACHE_KEY = "notes_reminders_cache_v4";
-  const REMINDER_PENDING_KEY = "notes_reminders_pending_v1";
+  const REMINDER_CACHE_KEY = "notes_reminders_cache_v3";
 
   function readReminderCache() {
     try {
-      let raw = localStorage.getItem(REMINDER_CACHE_KEY);
-      if (!raw) {
-        // Переносим старый кэш v3, чтобы обновление приложения само по себе
-        // не убирало уже созданные пользователем карточки.
-        raw = localStorage.getItem("notes_reminders_cache_v3");
-        if (raw) localStorage.setItem(REMINDER_CACHE_KEY, raw);
-      }
-      const value = JSON.parse(raw || "[]");
+      const value = JSON.parse(localStorage.getItem(REMINDER_CACHE_KEY) || "[]");
       return Array.isArray(value) ? value : [];
     } catch (_) { return []; }
   }
 
   function writeReminderCache(items) {
     try { localStorage.setItem(REMINDER_CACHE_KEY, JSON.stringify(items.slice(0, 50))); } catch (_) {}
-  }
-
-  function readPendingReminders() {
-    try {
-      const value = JSON.parse(localStorage.getItem(REMINDER_PENDING_KEY) || "[]");
-      return Array.isArray(value) ? value : [];
-    } catch (_) { return []; }
-  }
-
-  function writePendingReminders(items) {
-    try { localStorage.setItem(REMINDER_PENDING_KEY, JSON.stringify(items.slice(0, 50))); } catch (_) {}
-  }
-
-  function markReminderPending(item) {
-    const id = item?.id || item?.server_id;
-    if (!id || !item?.text || !item?.time || !item?.mode) return;
-    const next = { ...item, id, server_id: id, pending_since: Date.now() };
-    const items = readPendingReminders().filter((x) => (x.server_id || x.id) !== id);
-    writePendingReminders([next, ...items]);
-  }
-
-  function clearReminderPending(id) {
-    if (!id) return;
-    writePendingReminders(readPendingReminders().filter((x) => (x.server_id || x.id) !== id));
   }
 
   function cacheReminder(item) {
@@ -153,30 +121,13 @@
     const next = { ...item, id: serverId, server_id: serverId, saved_at: Date.now() };
     const items = readReminderCache().filter((x) => (x.server_id || x.id) !== serverId);
     writeReminderCache([next, ...items]);
-    markReminderPending(next);
   }
 
   function replaceReminderCache(items) {
-    const remote = (Array.isArray(items) ? items : [])
+    const normalized = (Array.isArray(items) ? items : [])
       .filter((x) => x?.id && x?.text && x?.time && x?.mode)
       .map((x) => ({ ...x, server_id: x.id }));
-    const remoteIds = new Set(remote.map((x) => x.id));
-    const pending = readPendingReminders().filter((x) => {
-      const id = x.server_id || x.id;
-      if (remoteIds.has(id)) { clearReminderPending(id); return false; }
-      // Pending records are retained briefly to survive eventual-consistency
-      // windows, but stale broken records do not live forever.
-      return Date.now() - Number(x.pending_since || 0) < 10 * 60 * 1000;
-    });
-    const byId = new Map();
-    [...remote, ...pending, ...readReminderCache()].forEach((item) => {
-      const id = item.server_id || item.id;
-      if (!id) return;
-      if (!byId.has(id) || item.pending_since || item.saved_at > (byId.get(id).saved_at || 0)) byId.set(id, item);
-    });
-    const normalized = [...byId.values()]
-      .filter((x) => x?.text && x?.time && x?.mode)
-      .sort((a, b) => String(a.time).localeCompare(String(b.time)));
+    normalized.sort((a, b) => String(a.time).localeCompare(String(b.time)));
     writeReminderCache(normalized);
     renderReminderCache();
   }
@@ -677,32 +628,16 @@
       tg?.HapticFeedback?.notificationOccurred("success");
       if (tg?.MainButton) tg.MainButton.hideProgress();
       if (fb) fb.textContent = editing ? "Изменения сохранены ✓" : "Сохранено ✓";
-      // Сначала показываем локально подтверждённую запись, затем мягко
-      // синхронизируемся с сервером. Устаревший GET больше не стирает её.
       setTimeout(() => { showHome(); loadRemoteReminders(); }, 450);
       return;
     } catch (apiError) {
-      console.warn("Mini App API save failed, trying Telegram sendData", apiError);
+      console.error("Mini App API save failed", apiError);
+      resetSaveState();
+      tg?.HapticFeedback?.notificationOccurred("error");
+      const message = apiError?.message || "Ошибка сервера";
+      alert(`Не удалось сохранить напоминание.\n\n${message}`);
+      return;
     }
-
-    if (tg?.sendData) {
-      try {
-        const localId = payload.id || `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-        const fallbackItem = { ...payload, id: localId, server_id: localId, local_only: true };
-        tg.sendData(JSON.stringify(payload));
-        cacheReminder(fallbackItem);
-        renderReminderCache();
-        tg?.HapticFeedback?.notificationOccurred("success");
-        saveTimer = setTimeout(() => { showHome(); resetSaveState(); }, 700);
-        return;
-      } catch (err) {
-        console.error("Telegram WebApp.sendData failed", err);
-      }
-    }
-
-    resetSaveState();
-    tg?.HapticFeedback?.notificationOccurred("error");
-    alert("Не удалось сохранить напоминание. Проверьте подключение Mini App к серверу.");
   }
 
   // Видимая кнопка сохранения находится внутри Mini App, поэтому она
