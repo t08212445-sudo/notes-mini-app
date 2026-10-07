@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="classic" data-scheme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Напоминалка</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script>
+// Применяем сохранённую тему ДО отрисовки, чтобы не было мигания
+(function () {
+  try {
+    var d = document.documentElement;
+    d.dataset.theme = localStorage.getItem("rem_theme") || "classic";
+    d.dataset.scheme = "dark";
+  } catch (e) {}
+})();
+</script>
+</head>
+<body>
+
+<div class="screen">
+
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+
+  <header class="head">
+    <div class="head-row">
+      <button type="button" class="icon-btn hidden" id="backBtn" aria-label="Назад">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+             stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+      <div class="head-logo" id="headLogo">⏰</div>
+      <div class="head-text">
+        <h1 id="headTitle">Напоминалки</h1>
+        <p class="head-sub" id="headSub">Активные напоминалки</p>
+      </div>
+      <button type="button" class="icon-btn" id="settingsBtn" aria-label="Настройки">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06
+                   a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09
+                   a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06
+                   a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82
+                   1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09
+                   a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06
+                   a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01
+                   a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09
+                   a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06
+                   a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01
+                   a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09
+                   a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="viewHome">
+  <!-- ---------- мои напоминалки ---------- -->
+  <section class="home-reminders" id="myRemindersSection">
+    <div class="my-reminders-head">
+      <div>
+        <h3>Мои напоминалки <span id="myRemindersCount">0</span></h3>
+      </div>
+    </div>
+
+    <div class="my-reminders-list" id="myRemindersList"></div>
+
+    <div class="my-reminders-empty" id="myRemindersEmpty">
+      <div class="empty-art">⏰</div>
+      <strong>Пока нет напоминалок</strong>
+      <span>Нажми «+» внизу, чтобы создать первую.</span>
+    </div>
+  </section>
+
+  </main>
+
+  <main id="viewEditor" class="hidden">
+  <!-- ---------- колесо выбора времени ---------- -->
+  <section class="time-wheel-wrap">
+    <div class="time-wheel-highlight"></div>
+    <div class="time-wheel" id="wheelHours" aria-label="Часы"></div>
+    <div class="time-colon">:</div>
+    <div class="time-wheel" id="wheelMinutes" aria-label="Минуты"></div>
+  </section>
+
+  <!-- ---------- что сделать ---------- -->
+  <section class="card">
+    <label class="card-label" for="taskText">Что надо сделать?</label>
+    <textarea id="taskText" class="task-input" maxlength="500" rows="2"
+              placeholder="Введите напоминание"></textarea>
+  </section>
+
+  <!-- ---------- режим повтора ---------- -->
+  <section class="card">
+    <div class="card-label">Повтор</div>
+    <div class="segmented" id="modeSegmented">
+      <button type="button" class="seg-btn active" data-mode="once">Разово</button>
+      <button type="button" class="seg-btn" data-mode="weekly">По дням</button>
+      <button type="button" class="seg-btn" data-mode="interval">Через N дней</button>
+    </div>
+
+    <div class="mode-pane" id="paneOnce">
+      <label class="field-label" for="onceDate">Дата</label>
+      <input type="date" id="onceDate" class="date-input">
+    </div>
+
+    <div class="mode-pane hidden" id="paneWeekly">
+      <label class="field-label">Дни недели</label>
+      <div class="day-pills" id="dayPills">
+        <button type="button" class="day-pill" data-day="0">Пн</button>
+        <button type="button" class="day-pill" data-day="1">Вт</button>
+        <button type="button" class="day-pill" data-day="2">Ср</button>
+        <button type="button" class="day-pill" data-day="3">Чт</button>
+        <button type="button" class="day-pill" data-day="4">Пт</button>
+        <button type="button" class="day-pill" data-day="5">Сб</button>
+        <button type="button" class="day-pill" data-day="6">Вс</button>
+      </div>
+    </div>
+
+    <div class="mode-pane hidden" id="paneInterval">
+      <label class="field-label">Повторять каждые</label>
+      <div class="stepper">
+        <button type="button" class="stepper-btn" id="intervalMinus">−</button>
+        <div class="stepper-value" id="intervalValue">1</div>
+        <button type="button" class="stepper-btn" id="intervalPlus">+</button>
+        <span class="stepper-unit" id="intervalUnit">день</span>
+      </div>
+      <label class="field-label" for="startDate">Начиная с</label>
+      <input type="date" id="startDate" class="date-input">
+    </div>
+  </section>
+
+  <div class="save-bar">
+    <button type="button" id="saveFallback" class="save-fallback">Сохранить</button>
+  </div>
+  </main>
+</div>
+
+<button type="button" class="fab" id="fabAdd" aria-label="Новая напоминалка">+</button>
+
+<!-- ==================== шторка настроек ==================== -->
+<div class="sheet-backdrop hidden" id="sheetBackdrop"></div>
+<div class="sheet" id="settingsSheet" aria-hidden="true">
+
+  <div class="sheet-handle"></div>
+
+  <section class="sheet-section">
+    <div class="sheet-label">Напоминалки</div>
+    <div class="rem-list-row">
+      <button type="button" class="rem-list-btn" id="menuList">
+        <span class="rem-list-ico">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="8" y1="6" x2="21" y2="6"></line>
+            <line x1="8" y1="12" x2="21" y2="12"></line>
+            <line x1="8" y1="18" x2="21" y2="18"></line>
+            <circle cx="4" cy="6" r="1"></circle>
+            <circle cx="4" cy="12" r="1"></circle>
+            <circle cx="4" cy="18" r="1"></circle>
+          </svg>
+        </span>
+        <span>Мои напоминалки</span>
+      </button>
+      <button type="button" class="rem-plus-btn" id="menuNew" aria-label="Новая напоминалка">+</button>
+    </div>
+  </section>
+
+  <section class="sheet-section">
+    <div class="sheet-label">Тема оформления</div>
+    <div class="theme-grid" id="themeGrid">
+      <button type="button" class="theme-btn" data-set-theme="classic" title="Классика">
+        <span class="theme-ico">✨</span><span class="theme-name">Классика</span>
+      </button>
+      <button type="button" class="theme-btn" data-set-theme="anime" title="Аниме">
+        <span class="theme-ico">🌸</span><span class="theme-name">Аниме</span>
+      </button>
+      <button type="button" class="theme-btn" data-set-theme="iphone" title="iPhone">
+        <span class="theme-ico"></span><span class="theme-name">iPhone</span>
+      </button>
+      <button type="button" class="theme-btn" data-set-theme="strinova" title="Strinova">
+        <span class="theme-ico">🎮</span><span class="theme-name">Strinova</span>
+      </button>
+      <button type="button" class="theme-btn" data-set-theme="resident" title="Resident Evil">
+        <span class="theme-ico">🧟</span><span class="theme-name">RE</span>
+      </button>
+    </div>
+  </section>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

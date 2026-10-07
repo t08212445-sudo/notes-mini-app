@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#080817"/><stop offset=".5" stop-color="#25104c"/><stop offset="1" stop-color="#080817"/></linearGradient><filter id="g"><feGaussianBlur stdDeviation="15"/></filter></defs>
+<rect width="900" height="420" rx="32" fill="url(#bg)"/><circle cx="670" cy="110" r="170" fill="#00e5ff" opacity=".13" filter="url(#g)"/><circle cx="790" cy="300" r="150" fill="#ff2e9a" opacity=".14" filter="url(#g)"/>
+<g opacity=".25" stroke="#00e5ff"><path d="M0 330L900 30M0 380L900 80M0 430L900 130"/><path d="M500 0v420M550 0v420"/></g>
+<!-- original neon hero duo -->
+<g transform="translate(600 55)"><circle cx="70" cy="70" r="47" fill="#00e5ff"/><path d="M4 207q20-86 66-96 47 10 66 96z" fill="#009bc1"/><path d="M23 70q12-62 92-32l18 35-28 12-12-26-50 30z" fill="#182d4a"/><path d="M0 126l-20 75 39 4 25-65zM140 126l20 75-39 4-25-65z" fill="#13384a"/></g>
+<g transform="translate(735 94) scale(.78)"><circle cx="70" cy="70" r="47" fill="#ff2e9a"/><path d="M4 207q20-86 66-96 47 10 66 96z" fill="#c51b79"/><path d="M17 75q25-67 105-25l-8 39-78 8z" fill="#3c173d"/><path d="M0 126l-20 75 39 4 25-65zM140 126l20 75-39 4-25-65z" fill="#40183c"/></g>
+<text x="42" y="70" fill="#00e5ff" font-family="Arial,sans-serif" font-weight="800" font-size="18" letter-spacing="5">SQUAD LINK // ONLINE</text>
+<text x="42" y="120" fill="#f2f8ff" font-family="Arial,sans-serif" font-weight="900" font-size="48">STRINOVA</text>
+<text x="42" y="151" fill="#ff2e9a" font-family="Arial,sans-serif" font-weight="700" font-size="16" letter-spacing="3">MING • MICHELE • SIGNAL</text>
+<rect x="42" y="188" width="355" height="2" fill="#00e5ff"/><text x="42" y="225" fill="#8999c9" font-family="Arial,sans-serif" font-size="15">TACTICAL HUD / REMINDER CHANNEL</text>
+<rect x="42" y="250" width="315" height="96" rx="16" fill="#0d0a20" stroke="#3b2a6a"/><text x="63" y="286" fill="#00e5ff" font-family="Arial,sans-serif" font-size="12" font-weight="800" letter-spacing="2">NEXT ACTION</text><text x="63" y="319" fill="#f2f8ff" font-family="Arial,sans-serif" font-size="23" font-weight="800">READY WHEN YOU ARE.</text>
+</svg>

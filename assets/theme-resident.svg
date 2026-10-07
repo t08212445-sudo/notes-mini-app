@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#090707"/><stop offset=".55" stop-color="#321116"/><stop offset="1" stop-color="#0b0909"/></linearGradient><linearGradient id="red"><stop stop-color="#ff314d"/><stop offset="1" stop-color="#8d0d20"/></linearGradient><filter id="g"><feGaussianBlur stdDeviation="12"/></filter></defs>
+<rect width="900" height="420" rx="32" fill="url(#bg)"/>
+<path d="M0 355L900 285V420H0z" fill="#12090b"/>
+<circle cx="695" cy="100" r="145" fill="#b9152d" opacity=".15" filter="url(#g)"/>
+<!-- original tactical hero silhouettes -->
+<g transform="translate(560 58)"><circle cx="70" cy="72" r="48" fill="#d9a441"/><path d="M12 205q12-80 58-91 46 11 58 91z" fill="#7c1726"/><path d="M33 56q37-43 75 0v28H33z" fill="#1b1212"/><path d="M25 122l-25 72 34 9 25-59zM115 122l25 72-34 9-25-59z" fill="#4a1820"/></g>
+<g transform="translate(700 95) scale(.78)"><circle cx="70" cy="72" r="48" fill="#c99b72"/><path d="M12 205q12-80 58-91 46 11 58 91z" fill="#34302c"/><path d="M20 77q20-70 100-35l-8 42-80 7z" fill="#171212"/><path d="M0 132l-24 62 34 9 24-59zM140 132l24 62-34 9-24-59z" fill="#242022"/></g>
+<text x="42" y="70" fill="#d9a441" font-family="Arial,sans-serif" font-weight="800" font-size="18" letter-spacing="5">R.P.D. // SURVIVAL MODE</text>
+<text x="42" y="120" fill="#fff3e2" font-family="Arial,sans-serif" font-weight="900" font-size="48">RESIDENT EVIL</text>
+<text x="42" y="151" fill="#ff314d" font-family="Arial,sans-serif" font-weight="700" font-size="16" letter-spacing="3">LEON • CLAIRE • BIOHAZARD</text>
+<rect x="42" y="188" width="355" height="2" fill="#c0182f"/><text x="42" y="225" fill="#a99b8f" font-family="Arial,sans-serif" font-size="15">MISSION CONTROL / REMINDER SIGNAL</text>
+<rect x="42" y="250" width="315" height="96" rx="16" fill="#170d10" stroke="#52222a"/><text x="63" y="286" fill="#d51f3b" font-family="Arial,sans-serif" font-size="12" font-weight="800" letter-spacing="2">OBJECTIVE</text><text x="63" y="319" fill="#f3eadb" font-family="Arial,sans-serif" font-size="23" font-weight="800">DON'T LET IT SLIP.</text>
+</svg>

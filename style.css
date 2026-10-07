@@ -1,0 +1,1189 @@
+:root {
+  --radius-lg: 22px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+  --font: "Manrope", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* ============================================================
+   ТЕМА «КЛАССИКА» — ночное небо -> рассвет
+   ============================================================ */
+:root[data-theme="classic"][data-scheme="dark"] {
+  --bg: #11132A; --surface: #1B1E3E; --surface-2: #242A52; --stroke: #343A6B;
+  --text: #F3F1EA; --text-dim: #9EA1C9;
+  --accent: #8C7CF0; --accent-soft: rgba(140,124,240,.18);
+  --sunrise: #FFB454; --sunrise-soft: rgba(255,180,84,.16);
+  color-scheme: dark;
+}
+:root[data-theme="classic"][data-scheme="light"] {
+  --bg: #F4F2FB; --surface: #FFFFFF; --surface-2: #ECEAFA; --stroke: #DEDBF3;
+  --text: #1C1A33; --text-dim: #6E6B94;
+  --accent: #6E5AE0; --accent-soft: rgba(110,90,224,.12);
+  --sunrise: #E6963D; --sunrise-soft: rgba(230,150,61,.16);
+  color-scheme: light;
+}
+
+/* ============================================================
+   ТЕМА «АНИМЕ» — сакура, сирень, неоновая мечта
+   ============================================================ */
+:root[data-theme="anime"][data-scheme="dark"] {
+  --bg: #1B1026; --surface: #2A1838; --surface-2: #3B2350; --stroke: #4E2F68;
+  --text: #FFF2FA; --text-dim: #C9A8D8;
+  --accent: #FF7AC3; --accent-soft: rgba(255,122,195,.18);
+  --sunrise: #C58CFF; --sunrise-soft: rgba(197,140,255,.16);
+  color-scheme: dark;
+}
+:root[data-theme="anime"][data-scheme="light"] {
+  --bg: #FFF0F7; --surface: #FFFFFF; --surface-2: #FFE3F1; --stroke: #F5C4E0;
+  --text: #3D1F38; --text-dim: #A76D9A;
+  --accent: #E85D9E; --accent-soft: rgba(232,93,158,.12);
+  --sunrise: #9D5CFF; --sunrise-soft: rgba(157,92,255,.14);
+  color-scheme: light;
+}
+
+/* ============================================================
+   ТЕМА «IPHONE» — чистый iOS
+   ============================================================ */
+:root[data-theme="iphone"][data-scheme="dark"] {
+  --bg: #000000; --surface: #1C1C1E; --surface-2: #2C2C2E; --stroke: #38383A;
+  --text: #FFFFFF; --text-dim: #98989F;
+  --accent: #0A84FF; --accent-soft: rgba(10,132,255,.18);
+  --sunrise: #FF9F0A; --sunrise-soft: rgba(255,159,10,.16);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Manrope", sans-serif;
+  color-scheme: dark;
+}
+:root[data-theme="iphone"][data-scheme="light"] {
+  --bg: #F2F2F7; --surface: #FFFFFF; --surface-2: #EFEFF2; --stroke: #D1D1D6;
+  --text: #1C1C1E; --text-dim: #8E8E93;
+  --accent: #007AFF; --accent-soft: rgba(0,122,255,.12);
+  --sunrise: #FF9500; --sunrise-soft: rgba(255,149,0,.14);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Manrope", sans-serif;
+  color-scheme: light;
+}
+
+/* ============================================================
+   ТЕМА «STRINOVA» — неон: циан + маджента
+   ============================================================ */
+:root[data-theme="strinova"][data-scheme="dark"] {
+  --bg: #0B0714; --surface: #171029; --surface-2: #241740; --stroke: #372663;
+  --text: #EAF6FF; --text-dim: #8F9BD6;
+  --accent: #00E5FF; --accent-soft: rgba(0,229,255,.16);
+  --sunrise: #FF2E9A; --sunrise-soft: rgba(255,46,154,.16);
+  color-scheme: dark;
+}
+:root[data-theme="strinova"][data-scheme="light"] {
+  --bg: #EEF3FF; --surface: #FFFFFF; --surface-2: #E3E9FF; --stroke: #C6D0F0;
+  --text: #14103A; --text-dim: #6A72A8;
+  --accent: #0090C8; --accent-soft: rgba(0,144,200,.12);
+  --sunrise: #E0217E; --sunrise-soft: rgba(224,33,126,.12);
+  color-scheme: light;
+}
+
+/* ============================================================
+   ТЕМА «RESIDENT EVIL» — выживание, красная корпорация
+   ============================================================ */
+:root[data-theme="resident"][data-scheme="dark"] {
+  --bg: #0B0909; --surface: #191112; --surface-2: #261719; --stroke: #40262A;
+  --text: #EDE4D3; --text-dim: #9C8F82;
+  --accent: #C0182F; --accent-soft: rgba(192,24,47,.18);
+  --sunrise: #D9A441; --sunrise-soft: rgba(217,164,65,.14);
+  color-scheme: dark;
+}
+:root[data-theme="resident"][data-scheme="light"] {
+  --bg: #EFE9DC; --surface: #FAF6EC; --surface-2: #EAE2D0; --stroke: #D3C8B2;
+  --text: #2A1F1A; --text-dim: #7D7264;
+  --accent: #9E1428; --accent-soft: rgba(158,20,40,.10);
+  --sunrise: #B07E22; --sunrise-soft: rgba(176,126,34,.14);
+  color-scheme: light;
+}
+
+/* ============================================================ */
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color .25s ease, color .25s ease;
+}
+
+body {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);
+}
+
+.screen {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 20px 18px 8px;
+}
+
+/* ---------------- header ---------------- */
+.head { margin-bottom: 18px; }
+
+.head-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.head-logo {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--accent), var(--sunrise));
+  box-shadow: 0 4px 16px var(--accent-soft);
+}
+
+.head-text { flex: 1; min-width: 0; }
+
+.head h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  background: linear-gradient(120deg, var(--text) 30%, var(--accent) 70%, var(--sunrise));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.head-sub {
+  margin: 3px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  border: 1px solid var(--stroke);
+  background: var(--surface);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: color .15s ease, border-color .15s ease, transform .1s ease;
+}
+.icon-btn:active {
+  transform: scale(.94);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ---------------- time wheel ---------------- */
+.time-wheel-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 176px;
+  margin-bottom: 20px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--stroke);
+  overflow: hidden;
+  transition: background-color .25s ease, border-color .25s ease;
+}
+
+.time-wheel-highlight {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 50%;
+  height: 56px;
+  transform: translateY(-50%);
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.time-wheel {
+  position: relative;
+  z-index: 1;
+  width: 84px;
+  height: 100%;
+  overflow-y: scroll;
+  scroll-snap-type: y proximity;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  /* Не используем CSS mask: Telegram WebView на некоторых устройствах
+     отрисовывает замаскированные элементы как пустые. */
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+.time-wheel::-webkit-scrollbar { display: none; }
+
+.time-wheel .cell {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  scroll-snap-align: center;
+  font-size: 30px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+  line-height: 54px;
+  opacity: 1;
+  transition: color .15s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.time-wheel .cell.is-center {
+  color: var(--text);
+  font-weight: 800;
+}
+
+.time-colon {
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--text);
+  z-index: 1;
+  padding-bottom: 2px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---------------- cards ---------------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  margin-bottom: 14px;
+  transition: background-color .25s ease, border-color .25s ease;
+}
+
+.card-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.field-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin: 14px 0 8px;
+}
+.field-label:first-of-type { margin-top: 0; }
+
+.task-input {
+  width: 100%;
+  resize: none;
+  background: var(--surface-2);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+  padding: 12px 14px;
+  line-height: 1.4;
+}
+.task-input:focus { outline: none; border-color: var(--accent); }
+.task-input::placeholder { color: var(--text-dim); }
+
+/* ---------------- segmented control ---------------- */
+.segmented {
+  display: flex;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  gap: 4px;
+}
+
+.seg-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px 6px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+
+.seg-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.mode-pane { margin-top: 2px; }
+.hidden { display: none; }
+
+.date-input {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  padding: 11px 12px;
+  color-scheme: inherit;
+}
+.date-input:focus { outline: none; border-color: var(--accent); }
+
+/* ---------------- day pills ---------------- */
+.day-pills {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.day-pill {
+  flex: 1;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  border: 1px solid var(--stroke);
+  background: var(--surface-2);
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.day-pill.active {
+  background: var(--sunrise);
+  border-color: var(--sunrise);
+  color: var(--bg);
+}
+
+/* ---------------- stepper ---------------- */
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.stepper-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--stroke);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.stepper-btn:active { background: var(--accent-soft); border-color: var(--accent); }
+
+.stepper-value {
+  min-width: 36px;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.stepper-unit {
+  color: var(--text-dim);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ---------------- fallback save button (outside Telegram) ---------------- */
+.save-fallback {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+  padding: 14px;
+  border: none;
+  border-radius: 14px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+}
+.save-fallback:disabled {
+  background: var(--surface-2);
+  color: var(--text-dim);
+  cursor: not-allowed;
+}
+
+/* ---------------- misc ---------------- */
+.hint {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-dim);
+  margin: 10px 0 0;
+}
+
+/* ============================================================
+   ШТОРКА НАСТРОЕК
+   ============================================================ */
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .45);
+  z-index: 40;
+  opacity: 1;
+  transition: opacity .25s ease;
+}
+.sheet-backdrop.hidden { display: block; opacity: 0; pointer-events: none; }
+
+.sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  max-width: 480px;
+  margin: 0 auto;
+  background: var(--surface);
+  border: 1px solid var(--stroke);
+  border-bottom: none;
+  border-radius: 24px 24px 0 0;
+  padding: 10px 18px calc(env(safe-area-inset-bottom, 0px) + 18px);
+  transform: translateY(105%);
+  transition: transform .28s cubic-bezier(.32,.72,.35,1);
+}
+.sheet.open { transform: translateY(0); }
+
+.sheet-handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--stroke);
+  margin: 4px auto 14px;
+}
+
+.sheet-section { margin-bottom: 18px; }
+.sheet-section:last-child { margin-bottom: 0; }
+
+.sheet-label {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+}
+
+/* --- строка «Мои напоминалки» + плюсик --- */
+.rem-list-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rem-list-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--stroke);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color .15s ease, transform .1s ease;
+}
+.rem-list-btn:active { transform: scale(.98); border-color: var(--accent); }
+
+.rem-list-ico {
+  display: flex;
+  color: var(--accent);
+}
+
+.rem-plus-btn {
+  width: 46px;
+  height: 46px;
+  flex: none;
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform .1s ease, filter .15s ease;
+}
+.rem-plus-btn:active { transform: scale(.92); filter: brightness(1.15); }
+
+/* --- выбор темы иконками --- */
+.theme-grid {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.theme-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 4px 8px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--stroke);
+  background: var(--surface-2);
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease, transform .1s ease;
+}
+.theme-btn:active { transform: scale(.95); }
+
+.theme-ico { font-size: 24px; line-height: 1; }
+
+.theme-name {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.theme-btn.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.theme-btn.active .theme-name { color: var(--accent); }
+
+/* --- переключатель светлая/тёмная --- */
+.scheme-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.scheme-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--stroke);
+  background: var(--surface-2);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease, color .15s ease;
+}
+
+.scheme-btn.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* ============================================================
+   ВИЗУАЛЬНАЯ ОБОЛОЧКА 2.0 — иллюстрации, атмосфера, глубина
+   ============================================================ */
+body { position: relative; overflow-x: hidden; }
+body::before, body::after {
+  content: "";
+  position: fixed;
+  width: 240px; height: 240px;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: .16;
+  pointer-events: none;
+  z-index: -2;
+}
+body::before { left: -110px; top: 90px; background: var(--accent); }
+body::after { right: -120px; top: 420px; background: var(--sunrise); }
+
+.ambient { position: fixed; inset: 0; pointer-events: none; z-index: -3; opacity: .34; }
+.ambient::before, .ambient::after {
+  content: ""; position: absolute; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,.65) 0 1px, transparent 2px);
+  background-size: 72px 72px; width: 100%; height: 100%;
+}
+.ambient-a { transform: rotate(11deg); opacity: .34; }
+.ambient-b { transform: rotate(-7deg) scale(1.18); opacity: .18; }
+
+.hero-card {
+  position: relative; min-height: 174px; overflow: hidden;
+  display: flex; align-items: center; margin: 0 0 16px;
+  padding: 20px 18px; border-radius: 26px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--surface) 92%, var(--accent) 8%), var(--surface-2));
+  border: 1px solid color-mix(in srgb, var(--stroke) 75%, var(--accent) 25%);
+  box-shadow: 0 18px 44px rgba(0,0,0,.16), inset 0 1px 0 rgba(255,255,255,.08);
+}
+.hero-card::after {
+  content: ""; position: absolute; inset: auto -50px -80px auto; width: 190px; height: 190px;
+  border-radius: 50%; background: var(--accent-soft); filter: blur(4px);
+}
+.hero-copy { width: 58%; position: relative; z-index: 2; }
+.hero-kicker { font-size: 10px; font-weight: 900; letter-spacing: .16em; color: var(--accent); }
+.hero-copy h2 { margin: 5px 0 5px; font-size: 22px; line-height: 1.08; letter-spacing: -.035em; }
+.hero-copy p { margin: 0; color: var(--text-dim); font-size: 12px; line-height: 1.45; }
+.hero-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.hero-chips span {
+  padding: 6px 8px; border-radius: 999px; background: var(--accent-soft);
+  color: var(--text); font-size: 10px; font-weight: 800; border: 1px solid var(--stroke);
+}
+.hero-art { position: absolute; width: 64%; max-width: 330px; right: -76px; top: -8px; opacity: .96; filter: drop-shadow(0 14px 20px rgba(0,0,0,.18)); }
+
+.time-wheel-wrap {
+  box-shadow: 0 14px 34px rgba(0,0,0,.10), inset 0 1px 0 rgba(255,255,255,.06);
+  background: linear-gradient(160deg, var(--surface), color-mix(in srgb, var(--surface) 88%, var(--accent) 12%));
+}
+.card { box-shadow: 0 10px 28px rgba(0,0,0,.08), inset 0 1px 0 rgba(255,255,255,.04); }
+.card-label::before { content: "✦"; color: var(--accent); margin-right: 7px; font-size: 11px; }
+.task-input, .date-input { box-shadow: inset 0 2px 10px rgba(0,0,0,.05); }
+.seg-btn.active { box-shadow: 0 7px 18px var(--accent-soft); }
+.day-pill.active { box-shadow: 0 7px 18px var(--sunrise-soft); }
+
+.mini-promo {
+  display: flex; align-items: center; gap: 10px; min-height: 74px; margin: 16px 0 4px;
+  padding: 10px 12px; border-radius: 20px; overflow: hidden;
+  background: linear-gradient(135deg, var(--surface-2), var(--accent-soft));
+  border: 1px solid var(--stroke);
+}
+.mini-promo img { width: 132px; flex: none; margin-left: -20px; opacity: .85; }
+.mini-promo div { display: flex; flex-direction: column; gap: 3px; }
+.mini-promo strong { font-size: 12px; }
+.mini-promo span { color: var(--text-dim); font-size: 10px; line-height: 1.3; }
+
+:root[data-theme="anime"] .hero-card { background: linear-gradient(135deg, #2a1838, #4b2458); }
+:root[data-theme="anime"] .hero-card::before { content: "🌸"; position: absolute; right: 18px; top: 14px; font-size: 18px; opacity: .7; }
+:root[data-theme="resident"] .hero-card { background: linear-gradient(135deg, #191112, #32191d); }
+:root[data-theme="resident"] .hero-kicker { letter-spacing: .2em; }
+:root[data-theme="strinova"] .hero-card { background: linear-gradient(135deg, #171029, #211440); }
+:root[data-theme="iphone"] .hero-card { border-radius: 30px; }
+
+@media (max-width: 380px) {
+  .hero-card { min-height: 158px; padding: 16px; }
+  .hero-copy { width: 62%; }
+  .hero-copy h2 { font-size: 19px; }
+  .hero-art { width: 67%; right: -84px; }
+}
+
+
+/* ============================================================
+   MY REMINDERS — нижняя панель как в приложении «Будильник»
+   ============================================================ */
+.my-reminders-card {
+  position: relative;
+  margin: 18px 0 14px;
+  padding: 16px;
+  border-radius: 26px;
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--surface) 94%, var(--accent) 6%), var(--surface-2));
+  border: 1px solid var(--stroke);
+  box-shadow: 0 16px 36px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.06);
+  overflow: hidden;
+}
+.my-reminders-card::before {
+  content: "";
+  position: absolute;
+  width: 130px;
+  height: 130px;
+  right: -48px;
+  top: -54px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  filter: blur(5px);
+  pointer-events: none;
+}
+.my-reminders-head {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.section-kicker {
+  display: block;
+  color: var(--accent);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .16em;
+  margin-bottom: 3px;
+}
+.my-reminders-head h3 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: -.03em;
+}
+.my-reminders-head h3 span {
+  display: inline-flex;
+  min-width: 23px;
+  height: 23px;
+  padding: 0 6px;
+  align-items: center;
+  justify-content: center;
+  margin-left: 5px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 11px;
+  vertical-align: 3px;
+}
+.tiny-add-btn {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border: 1px solid var(--accent);
+  border-radius: 14px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font: inherit;
+  font-size: 25px;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform .12s ease, background .15s ease;
+}
+.tiny-add-btn:active { transform: scale(.92); background: var(--accent); color: #fff; }
+
+.my-reminders-list {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.reminder-item {
+  padding: 12px;
+  border-radius: 18px;
+  border: 1px solid var(--stroke);
+  background: color-mix(in srgb, var(--surface-2) 92%, var(--accent) 8%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
+  animation: reminderIn .25s ease both;
+}
+@keyframes reminderIn {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.reminder-item-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.reminder-item-time {
+  font-size: 24px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.04em;
+}
+.reminder-item-badge {
+  padding: 5px 7px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+.reminder-item-text {
+  margin-top: 9px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.reminder-item-meta {
+  margin-top: 5px;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 600;
+}
+.reminder-item-actions {
+  display: flex;
+  gap: 7px;
+  margin-top: 10px;
+}
+.reminder-mini-btn {
+  flex: 1;
+  min-height: 34px;
+  border: 1px solid var(--stroke);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.reminder-mini-btn:active { transform: scale(.98); border-color: var(--accent); }
+.reminder-mini-btn.danger { color: #ff7185; }
+
+.my-reminders-empty {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 22px 12px 16px;
+  border: 1px dashed var(--stroke);
+  border-radius: 18px;
+  background: rgba(255,255,255,.015);
+}
+.my-reminders-empty.hidden { display: none; }
+.empty-art {
+  width: 54px;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  border-radius: 18px;
+  background: var(--accent-soft);
+  font-size: 27px;
+  box-shadow: 0 10px 26px var(--accent-soft);
+}
+.my-reminders-empty strong { font-size: 13px; }
+.my-reminders-empty span {
+  max-width: 260px;
+  margin-top: 4px;
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+/* ---------------- richer controls ---------------- */
+.task-input {
+  min-height: 74px;
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.task-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft), inset 0 2px 10px rgba(0,0,0,.05);
+}
+.date-input {
+  min-height: 44px;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.date-input:focus {
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+.seg-btn:active,
+.day-pill:active,
+.stepper-btn:active,
+.theme-btn:active,
+.rem-list-btn:active {
+  transform: scale(.97);
+}
+.card {
+  position: relative;
+  overflow: hidden;
+}
+.card::after {
+  content: "";
+  position: absolute;
+  left: -40px;
+  bottom: -70px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  filter: blur(20px);
+  pointer-events: none;
+}
+.hero-card {
+  isolation: isolate;
+}
+.hero-card::before {
+  z-index: -1;
+}
+
+/* ---------------- theme personalities ---------------- */
+:root[data-theme="classic"] .head-logo {
+  border-radius: 15px;
+}
+:root[data-theme="anime"] .head-logo,
+:root[data-theme="anime"] .my-reminders-card,
+:root[data-theme="anime"] .hero-card {
+  box-shadow: 0 16px 42px rgba(255,122,195,.13), inset 0 1px 0 rgba(255,255,255,.08);
+}
+:root[data-theme="anime"] .reminder-item {
+  background: linear-gradient(135deg, rgba(255,122,195,.09), var(--surface-2));
+}
+:root[data-theme="iphone"] .card,
+:root[data-theme="iphone"] .my-reminders-card,
+:root[data-theme="iphone"] .time-wheel-wrap {
+  border-radius: 28px;
+  box-shadow: 0 18px 40px rgba(0,0,0,.22);
+}
+:root[data-theme="iphone"] .seg-btn.active {
+  border-radius: 12px;
+}
+:root[data-theme="strinova"] .my-reminders-card {
+  border-color: color-mix(in srgb, var(--stroke) 65%, var(--accent) 35%);
+  box-shadow: 0 0 34px rgba(0,229,255,.06), 0 18px 42px rgba(0,0,0,.25);
+}
+:root[data-theme="strinova"] .reminder-item {
+  box-shadow: inset 3px 0 0 var(--accent), 0 0 24px rgba(0,229,255,.04);
+}
+:root[data-theme="resident"] .my-reminders-card {
+  background:
+    linear-gradient(145deg, rgba(192,24,47,.08), var(--surface-2)),
+    repeating-linear-gradient(0deg, transparent 0 5px, rgba(255,255,255,.012) 6px);
+}
+:root[data-theme="resident"] .reminder-item {
+  border-left: 3px solid var(--accent);
+  border-radius: 10px 18px 18px 10px;
+}
+:root[data-theme="resident"] .section-kicker::before {
+  content: "◆ ";
+}
+
+/* ---------------- mobile polish ---------------- */
+@media (max-width: 380px) {
+  .my-reminders-card { padding: 14px; }
+  .my-reminders-head h3 { font-size: 18px; }
+  .reminder-item-time { font-size: 22px; }
+  .reminder-item-actions { gap: 5px; }
+}
+
+/* ============================================================
+   CHARACTER THEMES — глубокая кастомизация
+   ============================================================ */
+.hero-card .hero-art {
+  transition: transform .35s ease, filter .35s ease, opacity .25s ease;
+}
+.hero-card:hover .hero-art { transform: scale(1.035) translateY(-2px); }
+
+:root[data-theme="resident"] body {
+  background:
+    linear-gradient(rgba(180,20,35,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(180,20,35,.025) 1px, transparent 1px),
+    var(--bg);
+  background-size: 28px 28px;
+}
+:root[data-theme="resident"] .hero-card {
+  min-height: 205px;
+  border-color: #63212b;
+  background: linear-gradient(120deg, #10090b 0%, #271015 54%, #12090b 100%);
+  box-shadow: 0 20px 60px rgba(150,10,30,.18), inset 0 0 0 1px rgba(216,161,59,.06);
+}
+:root[data-theme="resident"] .hero-card::before {
+  content: "R.P.D. // BIOHAZARD // SURVIVAL";
+  position: absolute;
+  left: 18px;
+  bottom: 12px;
+  color: #d8a13b;
+  font: 800 7px/1 Arial,sans-serif;
+  letter-spacing: .22em;
+  opacity: .72;
+}
+:root[data-theme="resident"] .hero-kicker { color: #d8a13b; }
+:root[data-theme="resident"] .hero-copy h2 { text-transform: uppercase; letter-spacing: .015em; }
+:root[data-theme="resident"] .hero-chips span { border-radius: 4px; background: #1c0c10; border-color: #55212a; color: #e9d8bc; }
+:root[data-theme="resident"] .head-logo { border-radius: 6px; background: linear-gradient(135deg,#9e1428,#d8a13b); box-shadow: 0 0 22px rgba(192,24,47,.25); }
+:root[data-theme="resident"] .card,
+:root[data-theme="resident"] .time-wheel-wrap,
+:root[data-theme="resident"] .my-reminders-card { border-radius: 12px; border-color: #48232a; }
+:root[data-theme="resident"] .my-reminders-card { background: linear-gradient(145deg,#150b0e,#211116); }
+:root[data-theme="resident"] .reminder-item { background: linear-gradient(105deg,#1a0d11,#271419); border-left: 4px solid #d51f3b; }
+:root[data-theme="resident"] .reminder-item-badge { background: rgba(213,31,59,.16); color: #e8b458; }
+:root[data-theme="resident"] .section-kicker { color:#d8a13b; }
+
+:root[data-theme="strinova"] body {
+  background:
+    radial-gradient(circle at 80% 10%, rgba(0,229,255,.09), transparent 28%),
+    radial-gradient(circle at 15% 85%, rgba(255,46,154,.08), transparent 30%),
+    var(--bg);
+}
+:root[data-theme="strinova"] .hero-card {
+  min-height: 205px;
+  border-color: #3b2a6a;
+  background: linear-gradient(125deg,#0b0918 0%,#21103f 52%,#11091e 100%);
+  box-shadow: 0 20px 65px rgba(0,229,255,.08), 0 0 0 1px rgba(255,46,154,.05) inset;
+}
+:root[data-theme="strinova"] .hero-card::before {
+  content: "SQUAD // ONLINE  •  MATCH READY";
+  position: absolute;
+  left: 18px;
+  bottom: 12px;
+  color: #00e5ff;
+  font: 800 7px/1 Arial,sans-serif;
+  letter-spacing: .2em;
+  opacity: .72;
+}
+:root[data-theme="strinova"] .hero-kicker { color:#00e5ff; }
+:root[data-theme="strinova"] .hero-copy h2 { letter-spacing: .01em; }
+:root[data-theme="strinova"] .hero-chips span { border-radius: 6px; background:#0d0a20; border-color:#3b2a6a; }
+:root[data-theme="strinova"] .head-logo { border-radius: 8px; background: linear-gradient(135deg,#00e5ff,#ff2e9a); box-shadow:0 0 28px rgba(0,229,255,.22); }
+:root[data-theme="strinova"] .card,
+:root[data-theme="strinova"] .time-wheel-wrap,
+:root[data-theme="strinova"] .my-reminders-card { border-color:#33255b; }
+:root[data-theme="strinova"] .my-reminders-card { background:linear-gradient(145deg,#110b22,#1b1030); }
+:root[data-theme="strinova"] .reminder-item { background:linear-gradient(100deg,#100b22,#20133d); border-left:3px solid #00e5ff; box-shadow:inset 0 0 30px rgba(0,229,255,.025), 0 0 18px rgba(255,46,154,.035); }
+:root[data-theme="strinova"] .reminder-item-badge { background:rgba(255,46,154,.12); color:#ff6cb9; }
+:root[data-theme="strinova"] .section-kicker { color:#00e5ff; }
+
+.theme-btn[data-set-theme="resident"] { background:linear-gradient(145deg,#18090d,#321116); border-color:#5b2029; }
+.theme-btn[data-set-theme="resident"] .theme-ico { filter:drop-shadow(0 0 7px rgba(213,31,59,.5)); }
+.theme-btn[data-set-theme="strinova"] { background:linear-gradient(145deg,#0c0a1b,#251143); border-color:#3d2d70; }
+.theme-btn[data-set-theme="strinova"] .theme-ico { filter:drop-shadow(0 0 8px rgba(0,229,255,.55)); }
+
+@media (max-width: 380px) {
+  :root[data-theme="resident"] .hero-card,
+  :root[data-theme="strinova"] .hero-card { min-height: 188px; }
+}
+
+
+/* ============================================================
+   FINAL POLISH: компактный верх и чистые карточки
+   ============================================================ */
+.head { margin-bottom: 12px; }
+.hero-card {
+  min-height: 128px;
+  margin-bottom: 12px;
+  padding: 16px 18px;
+  border-radius: 20px;
+}
+.hero-copy { width: 62%; }
+.hero-kicker { font-size: 9px; letter-spacing: .14em; }
+.hero-copy h2 { margin: 4px 0 4px; font-size: 21px; }
+.hero-copy p { max-width: 210px; font-size: 11px; line-height: 1.35; }
+.hero-art { width: 54%; max-width: 250px; right: -35px; top: -8px; opacity: .82; }
+.hero-chips { display: none; }
+.time-wheel-wrap { height: 164px; margin-bottom: 12px; border-radius: 20px; }
+.time-wheel .cell { height: 54px; }
+.time-wheel-highlight { height: 54px; }
+.card { padding: 14px; margin-bottom: 10px; border-radius: 18px; }
+.card-label { margin-bottom: 8px; font-size: 13px; }
+.my-reminders-card { margin-top: 8px; }
+.mini-promo, .hint { display: none; }
+@media (max-width: 380px) {
+  .screen { padding-left: 14px; padding-right: 14px; }
+  .hero-card { min-height: 116px; }
+  .hero-copy { width: 68%; }
+  .hero-art { width: 48%; right: -25px; }
+}
+
+/* Final: remove decorative text overlays from themed hero cards. */
+.hero-card::before { content: none !important; }
+.hero-card .hero-art { display: none; }
+.hero-copy { width: 100%; }
+.hero-card { min-height: 108px; }
+
+/* FINAL FIX: stable wheel + always-visible save button */
+.time-wheel { scroll-snap-type: y mandatory; }
+.time-wheel .cell { height: 54px; }
+.save-bar {
+  position: sticky;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+  z-index: 20;
+  margin: 12px 0 4px;
+  padding: 0;
+}
+.save-fallback {
+  position: static;
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-height: 46px;
+  height: 46px;
+  padding: 8px 14px;
+  margin: 0;
+  border: 0;
+  border-radius: 13px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.1;
+  font-weight: 800;
+  box-shadow: 0 7px 18px var(--accent-soft);
+  cursor: pointer;
+}
+.save-fallback:disabled { opacity: .45; cursor: default; box-shadow: none; }
+
+/* ============================================================
+   v9: главная = список напоминалок, «+» внизу, редактор отдельно
+   ============================================================ */
+.screen { padding-bottom: 104px; }
+.home-reminders { position: relative; margin: 4px 0 0; }
+.home-reminders .my-reminders-head { margin-bottom: 14px; }
+#viewHome.hidden, #viewEditor.hidden, .fab.hidden, #backBtn.hidden, .head-logo.hidden { display: none; }
+
+.fab {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 22px);
+  transform: translateX(-50%);
+  z-index: 30;
+  width: 64px;
+  height: 64px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 38px;
+  font-weight: 300;
+  line-height: 1;
+  padding: 0 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 10px 26px var(--accent-soft), 0 4px 14px rgba(0,0,0,.35);
+  transition: transform .15s ease;
+}
+.fab:active { transform: translateX(-50%) scale(.92); }
+
+/* В редакторе кнопка сохранения — обычная, не липкая */
+.save-bar { position: static; margin: 14px 0 4px; }
+
+/* v9.1: звёздочки по всему экрану (раньше обрезались кругом из-за border-radius) */
+.ambient { overflow: hidden; }
+.ambient::before, .ambient::after {
+  border-radius: 0;
+  inset: -25%;
+  width: auto;
+  height: auto;
+}
+.ambient::after { background-position: 36px 36px; opacity: .6; }
+.ambient-a { transform: none; }
+.ambient-b { transform: rotate(-7deg); }
+
+/* v9.1: фон рисуем на html, иначе непрозрачный body перекрывает звёзды и свечение
+   (они были видны только ниже конца контента) */
+html { background: var(--bg); min-height: 100%; }
+body { background: transparent; min-height: 100vh; }
