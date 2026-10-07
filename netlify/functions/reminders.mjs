@@ -72,11 +72,13 @@ async function readAll() {
   const store = getStore(STORE);
   const { blobs } = await store.list();
   const result = [];
+  const deleted = [];
   for (const entry of blobs) {
     const item = await store.get(entry.key, { type: 'json' });
-    if (item && item.id && item.user_id) result.push(item);
+    if (entry.key.startsWith('r/') && item && item.id && item.user_id) result.push(item);
+    if (entry.key.startsWith('d/') && item?.id) deleted.push(String(item.id));
   }
-  return result;
+  return { reminders: result, deleted_ids: deleted };
 }
 
 function validate(payload) {
@@ -97,7 +99,8 @@ export default async (req) => {
   try {
     if (req.method === 'GET') {
       if (botSyncAuthorized(req)) {
-        return json({ ok: true, reminders: await readAll() });
+        const all = await readAll();
+        return json({ ok: true, reminders: all.reminders, deleted_ids: all.deleted_ids });
       }
       const user = normalizeInitData(req.headers.get('x-telegram-init-data'));
       if (!user) return json({ ok: false, error: 'forbidden' }, 403);
@@ -105,7 +108,7 @@ export default async (req) => {
       return json({
         ok: true,
         user_id: Number(user.id),
-        reminders: all.filter((item) => Number(item.user_id) === Number(user.id)),
+        reminders: all.reminders.filter((item) => Number(item.user_id) === Number(user.id)),
       });
     }
 
@@ -118,6 +121,26 @@ export default async (req) => {
     const store = getStore(STORE);
     const body = await req.json();
     const id = body?.id;
+
+    if (req.method === 'POST' && botRequest && body?.action === 'upsert') {
+      const incoming = body?.item;
+      if (!incoming?.id || !incoming?.user_id) return json({ ok: false, error: 'invalid_item' }, 400);
+      const rid = String(incoming.id).slice(0, 64);
+      const existing = await store.get(`r/${rid}`, { type: 'json' });
+      const tombstone = await store.get(`d/${rid}`, { type: 'json' });
+      if (tombstone && !existing) return json({ ok: true, skipped: 'deleted' });
+      const item = { ...incoming, id: rid, user_id: Number(incoming.user_id), source: 'miniapp_api' };
+      if (existing) {
+        const oldUpdated = String(existing.updated_at || '');
+        const newUpdated = String(item.updated_at || '');
+        if (oldUpdated > newUpdated) return json({ ok: true, item: existing, skipped: 'newer_remote' });
+        item.last_sent = existing.last_sent ?? item.last_sent ?? null;
+        item.delivery_key = existing.delivery_key ?? item.delivery_key ?? null;
+      }
+      await store.delete(`d/${rid}`);
+      await store.setJSON(`r/${rid}`, item);
+      return json({ ok: true, item });
+    }
 
     if (req.method === 'POST' && botRequest && body?.action === 'mark_sent') {
       if (!id) return json({ ok: false, error: 'missing_id' }, 400);
@@ -142,6 +165,7 @@ export default async (req) => {
       const botDelete = botSyncAuthorized(req);
       if (!botDelete && Number(existing.user_id) !== Number(user.id)) return json({ ok: false, error: 'not_found' }, 404);
       await store.delete(`r/${id}`);
+      await store.setJSON(`d/${id}`, { id: String(id), deleted_at: new Date().toISOString() });
       return json({ ok: true, deleted: id });
     }
 

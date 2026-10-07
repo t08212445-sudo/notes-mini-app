@@ -5,23 +5,6 @@
   tg?.ready();
   tg?.expand();
 
-  // API находится на том же Netlify-сайте. При необходимости URL можно
-  // переопределить через window.REMINDERS_API_URL.
-  const REMINDERS_API_URL =
-    String(window.REMINDERS_API_URL || "/.netlify/functions/reminders").replace(/\/$/, "");
-
-  function telegramInitData() {
-    return String(tg?.initData || "").trim();
-  }
-
-  function apiHeaders() {
-    const initData = telegramInitData();
-    return {
-      "Content-Type": "application/json",
-      "X-Telegram-Init-Data": initData,
-    };
-  }
-
   // ==================================================================
   // ТЕМА: только тёмный режим
   // ==================================================================
@@ -118,17 +101,22 @@
 
   // Список напоминаний хранится на сервере по Telegram user_id.
   // localStorage используется только как быстрый кэш до ответа API.
-  const REMINDER_CACHE_KEY = "notes_reminders_cache_v3";
+  const REMINDER_CACHE_PREFIX = "notes_reminders_cache_v4_";
+  let currentTelegramUserId = null;
+
+  function reminderCacheKey() {
+    return `${REMINDER_CACHE_PREFIX}${currentTelegramUserId || "unknown"}`;
+  }
 
   function readReminderCache() {
     try {
-      const value = JSON.parse(localStorage.getItem(REMINDER_CACHE_KEY) || "[]");
+      const value = JSON.parse(localStorage.getItem(reminderCacheKey()) || "[]");
       return Array.isArray(value) ? value : [];
     } catch (_) { return []; }
   }
 
   function writeReminderCache(items) {
-    try { localStorage.setItem(REMINDER_CACHE_KEY, JSON.stringify(items.slice(0, 50))); } catch (_) {}
+    try { localStorage.setItem(reminderCacheKey(), JSON.stringify(items.slice(0, 50))); } catch (_) {}
   }
 
   function cacheReminder(item) {
@@ -202,9 +190,9 @@
         const id = item.server_id || item.id;
         deleteBtn.disabled = true; deleteBtn.textContent = "Удаляем…";
         try {
-          const response = await fetch(REMINDERS_API_URL, {
+          const response = await fetch("/.netlify/functions/reminders", {
             method: "DELETE",
-            headers: apiHeaders(),
+            headers: { "Content-Type": "application/json", "X-Telegram-Init-Data": tg?.initData || "" },
             body: JSON.stringify({ id }),
           });
           const data = await response.json().catch(() => ({}));
@@ -224,18 +212,26 @@
 
   async function loadRemoteReminders() {
     const initData = tg?.initData || "";
-    if (!initData) return;
+    if (!initData) {
+      console.warn("Telegram initData отсутствует: Mini App открыт не через Telegram WebApp.");
+      renderReminderCache();
+      return false;
+    }
     try {
-      const response = await fetch(REMINDERS_API_URL, {
-        headers: apiHeaders(),
+      const response = await fetch("/.netlify/functions/reminders", {
+        headers: { "X-Telegram-Init-Data": initData },
         cache: "no-store",
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data.ok) throw new Error(data.error || `API ${response.status}`);
+      currentTelegramUserId = String(data.user_id || tg?.initDataUnsafe?.user?.id || "");
+      if (!currentTelegramUserId) throw new Error("Telegram user_id отсутствует");
       replaceReminderCache(data.reminders || []);
+      return true;
     } catch (err) {
       console.warn("Не удалось загрузить напоминания пользователя", err);
       renderReminderCache();
+      return false;
     }
   }
 
@@ -536,32 +532,21 @@
   }
 
   async function saveViaApi(payload) {
-    const initData = telegramInitData();
-    if (!initData) {
-      throw new Error(
-        "Telegram initData отсутствует. Откройте Mini App именно внутри Telegram, а не обычной вкладкой браузера."
-      );
+    const initData = tg?.initData || "";
+    if (!initData) throw new Error("Telegram initData отсутствует");
+    const response = await fetch("/.netlify/functions/reminders", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Telegram-Init-Data": initData,
+      },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.ok) {
+      throw new Error(data.error || `API ${response.status}`);
     }
-
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 12000);
-    try {
-      const response = await fetch(REMINDERS_API_URL, {
-        method: "POST",
-        headers: apiHeaders(),
-        body: JSON.stringify(payload),
-        cache: "no-store",
-        signal: controller.signal,
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok || !data.ok) {
-        throw new Error(data.error || `API ${response.status}`);
-      }
-      if (!data.item?.id) throw new Error("Сервер не вернул ID напоминания");
-      return data.item;
-    } finally {
-      clearTimeout(timer);
-    }
+    return data.item;
   }
 
   function showHome() {
@@ -646,9 +631,13 @@
       fb.textContent = "Сохраняем…";
     }
 
+    // Единственный путь сохранения: Mini App → Netlify Function → Blobs.
+    // sendData здесь намеренно НЕ используется: при запуске через Menu/Open
+    // Telegram не обязан передавать web_app_data обратно боту.
     try {
       const saved = await saveViaApi(payload);
-      cacheReminder(saved);
+      currentTelegramUserId = currentTelegramUserId || String(tg?.initDataUnsafe?.user?.id || "");
+      cacheReminder(saved || payload);
       renderReminderCache();
       tg?.HapticFeedback?.notificationOccurred("success");
       if (tg?.MainButton) tg.MainButton.hideProgress();
@@ -656,11 +645,10 @@
       setTimeout(() => { showHome(); loadRemoteReminders(); }, 450);
       return;
     } catch (apiError) {
-      console.error("Mini App API save failed:", apiError);
+      console.error("Mini App API save failed", apiError);
       resetSaveState();
       tg?.HapticFeedback?.notificationOccurred("error");
-      alert(`Не удалось сохранить напоминание.\\n\\n${apiError?.message || apiError}`);
-      return;
+      alert(`Не удалось сохранить напоминание.\n\n${apiError?.message || "Ошибка API"}`);
     }
   }
 
@@ -676,6 +664,7 @@
   tg?.MainButton?.hide();
 
   applyTheme();
+  currentTelegramUserId = String(tg?.initDataUnsafe?.user?.id || "");
   renderReminderCache();
   loadRemoteReminders();
   if (urlEditing && urlPrefill) openEditor(urlPrefill); else showHome();

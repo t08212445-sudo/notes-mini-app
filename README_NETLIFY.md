@@ -1,13 +1,14 @@
-# Netlify — fixed reminder Mini App
+# Netlify Mini App v12
 
-Deploy this folder as the Netlify site.
+Deploy the CONTENTS of this folder as the Netlify site.
 
-Environment variables:
-- `BOT_TOKEN` — current Telegram bot token.
-- `MINIAPP_SYNC_SECRET` — preferred dedicated bot↔Netlify secret.
+Required environment variables:
+- `BOT_TOKEN` — current Telegram bot token (do not share it).
+- `MINIAPP_SYNC_SECRET` — the same secret configured in Pterodactyl.
+- `SITE_URL` — optional, set to the exact Netlify site URL.
 
-The function accepts the dedicated sync secret and, temporarily, a legacy
-sync header derived from `BOT_TOKEN`, so an already configured Netlify site
-continues to sync while `MINIAPP_SYNC_SECRET` is being migrated.
+The Mini App saves only through `/.netlify/functions/reminders` using Telegram `initData`.
+`sendData()` is not used as a save fallback, because Menu/Open launches do not reliably deliver `web_app_data` to the bot.
 
-After changing environment variables, trigger a new Netlify deploy.
+Cloud data is stored in Netlify Blobs store `notes-reminders`.
+The bot sync endpoint supports a two-way recovery flow: if Netlify is empty but the bot still has old Mini App reminders, the bot uploads them back to the cloud. Confirmed deletions are protected by tombstones so deleted reminders are not resurrected.
