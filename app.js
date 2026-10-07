@@ -5,6 +5,23 @@
   tg?.ready();
   tg?.expand();
 
+  // API находится на том же Netlify-сайте. При необходимости URL можно
+  // переопределить через window.REMINDERS_API_URL.
+  const REMINDERS_API_URL =
+    String(window.REMINDERS_API_URL || "/.netlify/functions/reminders").replace(/\/$/, "");
+
+  function telegramInitData() {
+    return String(tg?.initData || "").trim();
+  }
+
+  function apiHeaders() {
+    const initData = telegramInitData();
+    return {
+      "Content-Type": "application/json",
+      "X-Telegram-Init-Data": initData,
+    };
+  }
+
   // ==================================================================
   // ТЕМА: только тёмный режим
   // ==================================================================
@@ -185,9 +202,9 @@
         const id = item.server_id || item.id;
         deleteBtn.disabled = true; deleteBtn.textContent = "Удаляем…";
         try {
-          const response = await fetch("/.netlify/functions/reminders", {
+          const response = await fetch(REMINDERS_API_URL, {
             method: "DELETE",
-            headers: { "Content-Type": "application/json", "X-Telegram-Init-Data": tg?.initData || "" },
+            headers: apiHeaders(),
             body: JSON.stringify({ id }),
           });
           const data = await response.json().catch(() => ({}));
@@ -209,8 +226,8 @@
     const initData = tg?.initData || "";
     if (!initData) return;
     try {
-      const response = await fetch("/.netlify/functions/reminders", {
-        headers: { "X-Telegram-Init-Data": initData },
+      const response = await fetch(REMINDERS_API_URL, {
+        headers: apiHeaders(),
         cache: "no-store",
       });
       const data = await response.json().catch(() => ({}));
@@ -519,21 +536,32 @@
   }
 
   async function saveViaApi(payload) {
-    const initData = tg?.initData || "";
-    if (!initData) throw new Error("Telegram initData отсутствует");
-    const response = await fetch("/.netlify/functions/reminders", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Telegram-Init-Data": initData,
-      },
-      body: JSON.stringify(payload),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok || !data.ok) {
-      throw new Error(data.error || `API ${response.status}`);
+    const initData = telegramInitData();
+    if (!initData) {
+      throw new Error(
+        "Telegram initData отсутствует. Откройте Mini App именно внутри Telegram, а не обычной вкладкой браузера."
+      );
     }
-    return data.item;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 12000);
+    try {
+      const response = await fetch(REMINDERS_API_URL, {
+        method: "POST",
+        headers: apiHeaders(),
+        body: JSON.stringify(payload),
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || `API ${response.status}`);
+      }
+      if (!data.item?.id) throw new Error("Сервер не вернул ID напоминания");
+      return data.item;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   function showHome() {
@@ -618,12 +646,9 @@
       fb.textContent = "Сохраняем…";
     }
 
-    // Основной путь теперь одинаковый для кнопки Open/Menu и для обычного
-    // запуска: Mini App → Netlify Function → бот. sendData остаётся запасным
-    // вариантом для старого сценария reply-кнопки Telegram.
     try {
       const saved = await saveViaApi(payload);
-      cacheReminder(saved || payload);
+      cacheReminder(saved);
       renderReminderCache();
       tg?.HapticFeedback?.notificationOccurred("success");
       if (tg?.MainButton) tg.MainButton.hideProgress();
@@ -631,11 +656,10 @@
       setTimeout(() => { showHome(); loadRemoteReminders(); }, 450);
       return;
     } catch (apiError) {
-      console.error("Mini App API save failed", apiError);
+      console.error("Mini App API save failed:", apiError);
       resetSaveState();
       tg?.HapticFeedback?.notificationOccurred("error");
-      const message = apiError?.message || "Ошибка сервера";
-      alert(`Не удалось сохранить напоминание.\n\n${message}`);
+      alert(`Не удалось сохранить напоминание.\\n\\n${apiError?.message || apiError}`);
       return;
     }
   }

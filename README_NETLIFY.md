@@ -1,17 +1,13 @@
-# Netlify package
+# Netlify — fixed reminder Mini App
 
-Готовый пакет только для Netlify: Mini App + Netlify Function + Netlify Blobs.
+Deploy this folder as the Netlify site.
 
-Переменные Netlify:
-- BOT_TOKEN — новый токен Telegram-бота.
-- MINIAPP_SYNC_SECRET — тот же секрет, что используется ботом на Pterodactyl.
-- SITE_URL — адрес сайта Netlify (необязательно).
+Environment variables:
+- `BOT_TOKEN` — current Telegram bot token.
+- `MINIAPP_SYNC_SECRET` — preferred dedicated bot↔Netlify secret.
 
-Настройки уже в netlify.toml: publish `.` и functions `netlify/functions`.
+The function accepts the dedicated sync secret and, temporarily, a legacy
+sync header derived from `BOT_TOKEN`, so an already configured Netlify site
+continues to sync while `MINIAPP_SYNC_SECRET` is being migrated.
 
-После изменения переменных обязательно сделать новый Deploy.
-
-Сохранение напоминаний идёт только через:
-Mini App → /.netlify/functions/reminders → Netlify Blobs.
-
-`sendData()` не используется как резервный способ, чтобы приложение не показывало ложное «Сохранено» при ошибке API.
+After changing environment variables, trigger a new Netlify deploy.

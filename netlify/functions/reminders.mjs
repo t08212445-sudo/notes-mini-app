@@ -10,6 +10,8 @@ function json(data, status = 200) {
     headers: {
       'content-type': 'application/json; charset=utf-8',
       'cache-control': 'no-store',
+      'access-control-allow-methods': 'GET,POST,DELETE,OPTIONS',
+      'access-control-allow-headers': 'Content-Type,X-Telegram-Init-Data,X-Bot-Sync',
       ...(ALLOWED_ORIGIN ? { 'access-control-allow-origin': ALLOWED_ORIGIN } : {}),
     },
   });
@@ -40,11 +42,30 @@ function normalizeInitData(raw) {
   }
 }
 
+function safeEqualHex(a, b) {
+  if (!a || !b || a.length !== b.length) return false;
+  try { return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b)); }
+  catch { return false; }
+}
+
+function syncDigest(secret) {
+  return crypto.createHash('sha256').update(`${secret}|notes-mini-sync`).digest('hex');
+}
+
 function botSyncAuthorized(req) {
   const token = req.headers.get('x-bot-sync') || '';
+  const legacyToken = req.headers.get('x-bot-sync-legacy') || '';
+  const syncSecret = process.env.MINIAPP_SYNC_SECRET || '';
   const botToken = process.env.BOT_TOKEN || '';
-  const expected = crypto.createHash('sha256').update(`${botToken}|notes-mini-sync`).digest('hex');
-  return Boolean(botToken && token && crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expected)));
+
+  // Preferred auth: dedicated MINIAPP_SYNC_SECRET.
+  if (syncSecret && safeEqualHex(token, syncDigest(syncSecret))) return true;
+
+  // Compatibility auth: older bot builds derived the sync token from BOT_TOKEN.
+  // This keeps an existing Netlify deployment working during the migration.
+  if (botToken && safeEqualHex(legacyToken, syncDigest(botToken))) return true;
+
+  return false;
 }
 
 async function readAll() {
