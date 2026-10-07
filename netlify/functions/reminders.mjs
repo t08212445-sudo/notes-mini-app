@@ -42,38 +42,29 @@ function normalizeInitData(raw) {
 
 function botSyncAuthorized(req) {
   const token = req.headers.get('x-bot-sync') || '';
+  const legacyToken = req.headers.get('x-bot-sync-legacy') || '';
+  const syncSecret = process.env.MINIAPP_SYNC_SECRET || '';
   const botToken = process.env.BOT_TOKEN || '';
-  const expected = crypto.createHash('sha256').update(`${botToken}|notes-mini-sync`).digest('hex');
-  return Boolean(botToken && token && crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expected)));
-}
 
+  // Preferred auth: dedicated MINIAPP_SYNC_SECRET.
+  if (syncSecret && token) {
+    const expected = crypto.createHash('sha256').update(`${syncSecret}|notes-mini-sync`).digest('hex');
+    if (token.length === expected.length &&
+        crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expected))) {
+      return true;
+    }
+  }
 
-async function readUserIndex(userId) {
-  const store = getStore(STORE);
-  const index = await store.get(`u/${userId}`, { type: 'json' });
-  if (!Array.isArray(index)) return null;
-  return index.filter((item) => item && item.id && Number(item.user_id) === Number(userId));
-}
+  // Backward-compatible auth: existing BOT_TOKEN env.
+  if (botToken && legacyToken) {
+    const expectedLegacy = crypto.createHash('sha256').update(`${botToken}|notes-mini-sync`).digest('hex');
+    if (legacyToken.length === expectedLegacy.length &&
+        crypto.timingSafeEqual(Buffer.from(legacyToken), Buffer.from(expectedLegacy))) {
+      return true;
+    }
+  }
 
-async function writeUserIndex(userId, items) {
-  const store = getStore(STORE);
-  const clean = items
-    .filter((item) => item && item.id && Number(item.user_id) === Number(userId))
-    .sort((a, b) => String(a.time).localeCompare(String(b.time)));
-  await store.setJSON(`u/${userId}`, clean);
-  return clean;
-}
-
-async function upsertUserIndex(userId, item) {
-  const current = (await readUserIndex(userId)) || [];
-  const next = current.filter((x) => x.id !== item.id);
-  next.push(item);
-  return writeUserIndex(userId, next);
-}
-
-async function removeFromUserIndex(userId, id) {
-  const current = (await readUserIndex(userId)) || [];
-  return writeUserIndex(userId, current.filter((x) => x.id !== id));
+  return false;
 }
 
 async function readAll() {
@@ -109,24 +100,11 @@ export default async (req) => {
       }
       const user = normalizeInitData(req.headers.get('x-telegram-init-data'));
       if (!user) return json({ ok: false, error: 'forbidden' }, 403);
-      // Не используем store.list() как основной источник списка: список
-      // ключей Netlify Blobs может быть временно неактуальным сразу после
-      // записи. Персональный индекс читается по точному ключу.
-      let reminders = await readUserIndex(user.id);
-
-      // Одноразовая миграция старых записей, созданных до появления индекса.
-      // Если индекс отсутствует, сканируем старые r/* записи и сразу создаём
-      // индекс. Это не даёт существующим напоминалкам исчезнуть после обновления.
-      if (reminders === null) {
-        const all = await readAll();
-        reminders = all.filter((item) => Number(item.user_id) === Number(user.id));
-        await writeUserIndex(user.id, reminders);
-      }
-
+      const all = await readAll();
       return json({
         ok: true,
         user_id: Number(user.id),
-        reminders,
+        reminders: all.filter((item) => Number(item.user_id) === Number(user.id)),
       });
     }
 
@@ -153,7 +131,6 @@ export default async (req) => {
       if (typeof body.enabled === 'boolean') existing.enabled = body.enabled;
       existing.updated_at = new Date().toISOString();
       await store.setJSON(`r/${id}`, existing);
-      await upsertUserIndex(existing.user_id, existing);
       return json({ ok: true, item: existing });
     }
 
@@ -164,7 +141,6 @@ export default async (req) => {
       const botDelete = botSyncAuthorized(req);
       if (!botDelete && Number(existing.user_id) !== Number(user.id)) return json({ ok: false, error: 'not_found' }, 404);
       await store.delete(`r/${id}`);
-      await removeFromUserIndex(existing.user_id, id);
       return json({ ok: true, deleted: id });
     }
 
@@ -185,7 +161,6 @@ export default async (req) => {
     }
 
     await store.setJSON(`r/${item.id}`, item);
-    await upsertUserIndex(item.user_id, item);
     return json({ ok: true, item });
   } catch (e) {
     console.error('reminders function error:', e);
