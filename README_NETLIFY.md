@@ -1,27 +1,26 @@
-# Mini App v14
+# Netlify Mini App
 
-Deploy the **contents** of this folder as a Netlify site.
+Загрузи эту папку как сайт Netlify.
 
-Required environment variable:
-- `BOT_TOKEN` — token of the same Telegram bot.
+## Environment variable
 
-Optional:
-- `SITE_URL` — exact site URL.
+Нужна только одна переменная:
 
-The Mini App and bot use the same Netlify Blobs store: `notes-reminders`.
+`BOT_TOKEN` = токен Telegram-бота.
 
-## Storage model
+`MINIAPP_SYNC_SECRET` больше не используется.
 
-Each Telegram user has an index:
-- `u/<telegram_user_id>` — reminder IDs belonging to that user.
-- `r/<reminder_id>` — reminder itself.
-- `meta/users` — known Telegram user IDs.
-- `meta/deleted` — deletion tombstones preventing deleted reminders from being recreated by an old local copy.
+## API
 
-The old `store.list()` format is migrated automatically when the new user index does not exist yet.
+Все операции идут через:
 
-## Authentication
+`/.netlify/functions/reminders`
 
-Mini App requests use Telegram `initData` when available. Bot-generated Mini App URLs also contain a short-lived HMAC-signed launch token made with the existing `BOT_TOKEN`.
+Владелец напоминаний определяется по Telegram `user_id`.
 
-No `MINIAPP_SYNC_SECRET` is required.
+Mini App принимает два способа авторизации:
+
+1. стандартный Telegram `initData`;
+2. короткоживущий подписанный `launch`-токен, который бот добавляет в URL.
+
+Это позволяет одинаково работать при открытии из Telegram-кнопок и через меню Mini App.

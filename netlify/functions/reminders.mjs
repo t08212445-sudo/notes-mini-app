@@ -1,227 +1,80 @@
 import crypto from 'node:crypto';
 import { getStore } from '@netlify/blobs';
 
-const STORE = 'notes-reminders';
-const ALLOWED_ORIGIN = process.env.SITE_URL || '';
+const STORE_NAME = 'notes-reminders';
+const BOT_AUTH_MESSAGE = 'notes-bot-api-v2';
+const LAUNCH_TTL = 15 * 60;
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       'content-type': 'application/json; charset=utf-8',
-      'cache-control': 'no-store',
+      'cache-control': 'no-store, no-cache, must-revalidate',
       'access-control-allow-methods': 'GET,POST,DELETE,OPTIONS',
-      'access-control-allow-headers': 'Content-Type,X-Telegram-Init-Data,X-Bot-Auth,X-MiniApp-Launch-Token',
-      ...(ALLOWED_ORIGIN ? { 'access-control-allow-origin': ALLOWED_ORIGIN } : {}),
+      'access-control-allow-headers': 'Content-Type,X-Telegram-Init-Data,X-MiniApp-Launch,X-Bot-Auth,X-User-Id',
+      'access-control-allow-origin': '*',
     },
   });
 }
 
-function normalizeInitData(raw) {
-  if (!raw) return null;
-  try {
-    const params = new URLSearchParams(raw);
-    const hash = params.get('hash');
-    if (!hash) return null;
-    params.delete('hash');
-    const pairs = [...params.entries()].sort(([a], [b]) => a.localeCompare(b));
-    const dataCheckString = pairs.map(([k, v]) => `${k}=${v}`).join('\n');
-    const botToken = process.env.BOT_TOKEN;
-    if (!botToken) throw new Error('BOT_TOKEN is not configured on Netlify');
-    const secret = crypto.createHmac('sha256', 'WebAppData').update(botToken).digest();
-    const expected = crypto.createHmac('sha256', secret).update(dataCheckString).digest('hex');
-    if (!crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(hash))) return null;
-    const authDate = Number(params.get('auth_date') || 0);
-    if (!authDate || Math.abs(Date.now() / 1000 - authDate) > 86400) return null;
-    const user = JSON.parse(params.get('user') || '{}');
-    if (!user.id) return null;
-    return user;
-  } catch (e) {
-    console.error('initData validation failed:', e.message);
-    return null;
-  }
+function hmacHex(key, value) {
+  return crypto.createHmac('sha256', key).update(value).digest('hex');
 }
 
-function safeEqualHex(a, b) {
+function safeHex(a, b) {
   if (!a || !b || a.length !== b.length) return false;
-  try { return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b)); }
+  try { return crypto.timingSafeEqual(Buffer.from(a, 'hex'), Buffer.from(b, 'hex')); }
   catch { return false; }
 }
 
-function botAuthDigest() {
-  const botToken = process.env.BOT_TOKEN || '';
-  return crypto.createHash('sha256').update(`${botToken}|notes-mini-bot-sync-v13`).digest('hex');
+function botAuthorized(req) {
+  const token = process.env.BOT_TOKEN || '';
+  const supplied = req.headers.get('x-bot-auth') || '';
+  if (!token || !supplied) return false;
+  return safeHex(supplied, hmacHex(token, BOT_AUTH_MESSAGE));
 }
 
-function botSyncAuthorized(req) {
-  const token = req.headers.get('x-bot-auth') || '';
-  return !!process.env.BOT_TOKEN && safeEqualHex(token, botAuthDigest());
-}
-
-function verifyLaunchToken(raw) {
+function validateInitData(raw) {
   if (!raw || !process.env.BOT_TOKEN) return null;
-  try {
-    const [payload, signature] = String(raw).split('.');
-    if (!payload || !signature) return null;
-    const expected = crypto.createHmac('sha256', process.env.BOT_TOKEN)
-      .update(`MiniAppLaunchV13|${payload}`)
-      .digest('hex');
-    if (!safeEqualHex(expected, signature)) return null;
-    const decoded = Buffer.from(payload, 'base64url').toString('utf8');
-    const data = JSON.parse(decoded);
-    const userId = Number(data.user_id);
-    const exp = Number(data.exp);
-    if (!Number.isSafeInteger(userId) || userId <= 0 || !Number.isFinite(exp)) return null;
-    if (Math.floor(Date.now() / 1000) > exp) return null;
-    return { id: userId, launch: true };
-  } catch (e) {
-    console.error('launch token validation failed:', e.message);
-    return null;
-  }
-}
-
-function telegramUserFromInitData(raw) {
-  if (!raw) return null;
   try {
     const params = new URLSearchParams(raw);
     const hash = params.get('hash');
     if (!hash) return null;
     params.delete('hash');
     const pairs = [...params.entries()].sort(([a], [b]) => a.localeCompare(b));
-    const dataCheckString = pairs.map(([k, v]) => `${k}=${v}`).join('\n');
-    const botToken = process.env.BOT_TOKEN;
-    if (!botToken) throw new Error('BOT_TOKEN is not configured on Netlify');
-    const secret = crypto.createHmac('sha256', 'WebAppData').update(botToken).digest();
-    const expected = crypto.createHmac('sha256', secret).update(dataCheckString).digest('hex');
-    if (!safeEqualHex(expected, hash)) return null;
+    const check = pairs.map(([k, v]) => `${k}=${v}`).join('\n');
+    const secret = crypto.createHmac('sha256', 'WebAppData').update(process.env.BOT_TOKEN).digest();
+    const expected = crypto.createHmac('sha256', secret).update(check).digest('hex');
+    if (!safeHex(hash, expected)) return null;
     const authDate = Number(params.get('auth_date') || 0);
     if (!authDate || Math.abs(Date.now() / 1000 - authDate) > 86400) return null;
     const user = JSON.parse(params.get('user') || '{}');
-    if (!user.id) return null;
-    return user;
-  } catch (e) {
-    console.error('initData validation failed:', e.message);
-    return null;
-  }
+    return user?.id ? { id: Number(user.id), source: 'initData' } : null;
+  } catch { return null; }
 }
 
-function authenticatedUser(req) {
-  // Standard Telegram WebApp authentication.
-  const telegramUser = telegramUserFromInitData(req.headers.get('x-telegram-init-data'));
-  if (telegramUser) return telegramUser;
-
-  // Signed launch URL generated by the bot. This is used as a reliable
-  // fallback for bot-launched buttons when Telegram does not expose initData.
-  return verifyLaunchToken(req.headers.get('x-miniapp-launch-token'));
+function decodeLaunch(raw) {
+  if (!raw || !process.env.BOT_TOKEN) return null;
+  try {
+    const [payload, sig] = String(raw).split('.');
+    if (!payload || !sig) return null;
+    const expected = hmacHex(process.env.BOT_TOKEN, payload);
+    if (!safeHex(sig, expected)) return null;
+    const text = Buffer.from(payload, 'base64url').toString('utf8');
+    const data = JSON.parse(text);
+    if (!data.uid || !data.exp || Number(data.exp) < Math.floor(Date.now() / 1000)) return null;
+    return { id: Number(data.uid), source: 'launch' };
+  } catch { return null; }
 }
 
-async function readLegacyAll() {
-  const store = getStore(STORE);
-  const { blobs } = await store.list();
-  const result = [];
-  const deleted = [];
-  for (const entry of blobs) {
-    const item = await store.get(entry.key, { type: 'json' });
-    if (entry.key.startsWith('r/') && item?.id && item?.user_id) result.push(item);
-    if (entry.key.startsWith('d/') && item?.id) deleted.push(String(item.id));
-  }
-  return { reminders: result, deleted_ids: deleted };
-}
-
-async function readUserIds(store) {
-  const meta = await store.get('meta/users', { type: 'json' });
-  return Array.isArray(meta?.user_ids) ? meta.user_ids.map(Number).filter(Number.isSafeInteger) : [];
-}
-
-async function addUserId(store, userId) {
-  const ids = await readUserIds(store);
-  if (!ids.includes(Number(userId))) {
-    ids.push(Number(userId));
-    await store.setJSON('meta/users', { user_ids: ids });
-  }
-}
-
-async function readUserIndex(store, userId) {
-  const data = await store.get(`u/${Number(userId)}`, { type: 'json' });
-  return Array.isArray(data?.ids) ? data.ids.map(String) : [];
-}
-
-async function writeUserIndex(store, userId, ids) {
-  const unique = [...new Set(ids.map(String))];
-  await store.setJSON(`u/${Number(userId)}`, { user_id: Number(userId), ids: unique });
-}
-
-async function addToUserIndex(store, userId, reminderId) {
-  const ids = await readUserIndex(store, userId);
-  if (!ids.includes(String(reminderId))) ids.push(String(reminderId));
-  await writeUserIndex(store, userId, ids);
-  await addUserId(store, userId);
-}
-
-async function removeFromUserIndex(store, userId, reminderId) {
-  const ids = await readUserIndex(store, userId);
-  await writeUserIndex(store, userId, ids.filter((x) => x !== String(reminderId)));
-}
-
-async function readUserReminders(store, userId) {
-  let ids = await readUserIndex(store, userId);
-  const result = [];
-  const missing = [];
-  for (const id of ids) {
-    const item = await store.get(`r/${id}`, { type: 'json' });
-    if (item?.id && Number(item.user_id) === Number(userId)) result.push(item);
-    else missing.push(id);
-  }
-  if (missing.length) await writeUserIndex(store, userId, ids.filter((id) => !missing.includes(id)));
-  return result;
-}
-
-async function readAll() {
-  const store = getStore(STORE);
-  const userIds = await readUserIds(store);
-  const reminders = [];
-  const seen = new Set();
-  for (const userId of userIds) {
-    const items = await readUserReminders(store, userId);
-    for (const item of items) {
-      if (!seen.has(String(item.id))) {
-        seen.add(String(item.id));
-        reminders.push(item);
-      }
-    }
-  }
-
-  // Однократная миграция старого формата, где единственным индексом был store.list().
-  if (!userIds.length) {
-    const legacy = await readLegacyAll();
-    for (const item of legacy.reminders) {
-      await store.setJSON(`r/${String(item.id)}`, item);
-      await addToUserIndex(store, Number(item.user_id), String(item.id));
-      reminders.push(item);
-    }
-    return { reminders, deleted_ids: legacy.deleted_ids };
-  }
-
-  const deletedMeta = await store.get('meta/deleted', { type: 'json' });
-  return {
-    reminders,
-    deleted_ids: Array.isArray(deletedMeta?.ids) ? deletedMeta.ids.map(String) : [],
-  };
-}
-
-async function addTombstone(store, reminderId) {
-  const meta = await store.get('meta/deleted', { type: 'json' });
-  const ids = Array.isArray(meta?.ids) ? meta.ids.map(String) : [];
-  const rid = String(reminderId);
-  if (!ids.includes(rid)) ids.push(rid);
-  // Храним только разумное количество последних удалений.
-  await store.setJSON('meta/deleted', { ids: ids.slice(-2000) });
-}
-
-async function removeTombstone(store, reminderId) {
-  const meta = await store.get('meta/deleted', { type: 'json' });
-  const ids = Array.isArray(meta?.ids) ? meta.ids.map(String) : [];
-  await store.setJSON('meta/deleted', { ids: ids.filter((x) => x !== String(reminderId)) });
+function authenticate(req) {
+  if (botAuthorized(req)) return { bot: true, id: null };
+  const launch = decodeLaunch(req.headers.get('x-miniapp-launch') || '');
+  if (launch) return { bot: false, id: launch.id };
+  const init = validateInitData(req.headers.get('x-telegram-init-data') || '');
+  if (init) return { bot: false, id: init.id };
+  return null;
 }
 
 function validate(payload) {
@@ -236,107 +89,155 @@ function validate(payload) {
   if (mode === 'interval' && (!Number.isInteger(Number(payload.interval_days)) || Number(payload.interval_days) < 1 || Number(payload.interval_days) > 365 || !/^\d{4}-\d{2}-\d{2}$/.test(String(payload.start_date || '')))) throw new Error('Проверьте интервал и дату начала.');
 }
 
-export default async (req) => {
-  if (req.method === 'OPTIONS') return new Response('', { status: 204 });
+const store = () => getStore(STORE_NAME);
 
+async function readIndex(uid) {
+  const value = await store().get(`u/${uid}`, { type: 'json' });
+  return Array.isArray(value?.ids) ? value.ids.map(String) : [];
+}
+
+async function writeIndex(uid, ids) {
+  const unique = [...new Set(ids.map(String))];
+  await store().setJSON(`u/${uid}`, { user_id: Number(uid), ids: unique, updated_at: new Date().toISOString() });
+  return unique;
+}
+
+async function readReminder(id) {
+  return await store().get(`r/${String(id)}`, { type: 'json' });
+}
+
+async function getUserReminders(uid) {
+  let ids = await readIndex(uid);
+  let items = [];
+  for (const id of ids) {
+    const item = await readReminder(id);
+    if (item && Number(item.user_id) === Number(uid)) items.push(item);
+  }
+
+  // Одноразовая миграция старых r/* записей, которые были созданы до индекса.
+  // Она запускается только для конкретного пользователя и не является обычным путём.
+  if (!items.length) {
+    const legacy = await store().list({ prefix: 'r/' });
+    const found = [];
+    for (const entry of legacy.blobs || []) {
+      const item = await readReminder(entry.key.slice(2));
+      if (item && Number(item.user_id) === Number(uid)) found.push(item);
+    }
+    if (found.length) {
+      ids = [...new Set([...ids, ...found.map(x => String(x.id))])];
+      await writeIndex(uid, ids);
+      items = found;
+    }
+  }
+  items.sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')));
+  return items;
+}
+
+async function upsert(item, uid) {
+  validate(item);
+  const id = String(item.id || `r_${crypto.randomUUID().replaceAll('-', '').slice(0, 12)}`);
+  const existing = await readReminder(id);
+  if (existing && Number(existing.user_id) !== Number(uid)) throw new Error('forbidden');
+  const now = new Date().toISOString();
+  const result = {
+    ...item,
+    id,
+    user_id: Number(uid),
+    text: String(item.text).trim().slice(0, 500),
+    enabled: typeof item.enabled === 'boolean' ? item.enabled : true,
+    created_at: existing?.created_at || item.created_at || now,
+    updated_at: now,
+  };
+  if (existing) {
+    result.last_sent = item.last_sent ?? existing.last_sent ?? null;
+    result.delivery_key = item.delivery_key ?? existing.delivery_key ?? null;
+  } else {
+    result.last_sent = item.last_sent ?? null;
+    result.delivery_key = item.delivery_key ?? null;
+  }
+  await store().setJSON(`r/${id}`, result);
+  const ids = await readIndex(uid);
+  if (!ids.includes(id)) ids.push(id);
+  await writeIndex(uid, ids);
+  return result;
+}
+
+async function remove(id, uid, isBot) {
+  const rid = String(id);
+  const existing = await readReminder(rid);
+  if (!existing) return false;
+  if (!isBot && Number(existing.user_id) !== Number(uid)) return false;
+  const owner = Number(existing.user_id);
+  const ids = await readIndex(owner);
+  await writeIndex(owner, ids.filter(x => x !== rid));
+  await store().delete(`r/${rid}`);
+  await store().setJSON(`d/${rid}`, { id: rid, user_id: owner, deleted_at: new Date().toISOString() });
+  return true;
+}
+
+async function getAllForBot() {
+  const result = [];
+  const seen = new Set();
+  const indexes = await store().list({ prefix: 'u/' });
+  for (const entry of indexes.blobs || []) {
+    const uid = entry.key.slice(2);
+    const items = await getUserReminders(uid);
+    for (const item of items) { seen.add(String(item.id)); result.push(item); }
+  }
+  // Миграция старой базы: если индексов ещё нет, подхватываем старые r/*
+  // записи и сразу создаём новые пользовательские индексы.
+  if (!(indexes.blobs || []).length) {
+    const legacy = await store().list({ prefix: 'r/' });
+    const byUser = new Map();
+    for (const entry of legacy.blobs || []) {
+      const item = await readReminder(entry.key.slice(2));
+      if (!item?.id || item.user_id == null || seen.has(String(item.id))) continue;
+      result.push(item);
+      seen.add(String(item.id));
+      const uid = String(item.user_id);
+      if (!byUser.has(uid)) byUser.set(uid, []);
+      byUser.get(uid).push(String(item.id));
+    }
+    for (const [uid, ids] of byUser) await writeIndex(uid, ids);
+  }
+  return result;
+}
+
+export default async (req) => {
+  if (req.method === 'OPTIONS') return new Response('', { status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET,POST,DELETE,OPTIONS' } });
   try {
+    const auth = authenticate(req);
+    if (!auth) return json({ ok: false, error: 'forbidden' }, 403);
+
     if (req.method === 'GET') {
-      if (botSyncAuthorized(req)) {
-        const all = await readAll();
-        return json({ ok: true, reminders: all.reminders, deleted_ids: all.deleted_ids });
+      if (auth.bot && new URL(req.url).searchParams.get('all') === '1') {
+        return json({ ok: true, reminders: await getAllForBot() });
       }
-      const user = authenticatedUser(req);
-      if (!user) return json({ ok: false, error: 'forbidden' }, 403);
-      const all = await readAll();
-      return json({
-        ok: true,
-        user_id: Number(user.id),
-        reminders: all.reminders.filter((item) => Number(item.user_id) === Number(user.id)),
-      });
+      const uid = auth.bot ? Number(new URL(req.url).searchParams.get('user_id')) : auth.id;
+      if (!uid) return json({ ok: false, error: 'missing_user_id' }, 400);
+      return json({ ok: true, user_id: uid, reminders: await getUserReminders(uid) });
     }
 
-    if (req.method !== 'POST' && req.method !== 'DELETE') return json({ ok: false, error: 'method_not_allowed' }, 405);
-
-    const botRequest = botSyncAuthorized(req);
-    const user = botRequest ? null : authenticatedUser(req);
-    if (!botRequest && !user) return json({ ok: false, error: 'invalid_init_data' }, 401);
-
-    const store = getStore(STORE);
-    const body = await req.json();
-    const id = body?.id;
-
-    if (req.method === 'POST' && botRequest && body?.action === 'upsert') {
-      const incoming = body?.item;
-      if (!incoming?.id || !incoming?.user_id) return json({ ok: false, error: 'invalid_item' }, 400);
-      const rid = String(incoming.id).slice(0, 64);
-      const existing = await store.get(`r/${rid}`, { type: 'json' });
-      const deletedMeta = await store.get('meta/deleted', { type: 'json' });
-      const tombstone = Array.isArray(deletedMeta?.ids) && deletedMeta.ids.map(String).includes(rid);
-      if (tombstone && !existing) return json({ ok: true, skipped: 'deleted' });
-      const item = { ...incoming, id: rid, user_id: Number(incoming.user_id), source: 'miniapp_api' };
-      if (existing) {
-        const oldUpdated = String(existing.updated_at || '');
-        const newUpdated = String(item.updated_at || '');
-        if (oldUpdated > newUpdated) return json({ ok: true, item: existing, skipped: 'newer_remote' });
-        item.last_sent = existing.last_sent ?? item.last_sent ?? null;
-        item.delivery_key = existing.delivery_key ?? item.delivery_key ?? null;
+    const body = await req.json().catch(() => ({}));
+    if (req.method === 'POST') {
+      const uid = auth.bot ? Number(body.user_id) : auth.id;
+      if (!uid) return json({ ok: false, error: 'missing_user_id' }, 400);
+      if (body.action === 'upsert') {
+        const item = await upsert(body.item || {}, uid);
+        return json({ ok: true, item });
       }
-      await removeTombstone(store, rid);
-      await store.setJSON(`r/${rid}`, item);
-      await addToUserIndex(store, Number(item.user_id), rid);
+      const item = await upsert(body, uid);
       return json({ ok: true, item });
     }
 
-    if (req.method === 'POST' && botRequest && body?.action === 'mark_sent') {
-      if (!id) return json({ ok: false, error: 'missing_id' }, 400);
-      const existing = await store.get(`r/${id}`, { type: 'json' });
-      if (!existing) return json({ ok: false, error: 'not_found' }, 404);
-      const incomingLast = body.last_sent ? String(body.last_sent) : '';
-      const existingLast = existing.last_sent ? String(existing.last_sent) : '';
-      // Никогда не откатываем состояние доставки назад. Это делает
-      // облачное состояние источником истины после перезапуска бота.
-      existing.last_sent = [existingLast, incomingLast].filter(Boolean).sort().pop() || null;
-      if (body.delivery_key) existing.delivery_key = String(body.delivery_key);
-      if (typeof body.enabled === 'boolean') existing.enabled = body.enabled;
-      existing.updated_at = new Date().toISOString();
-      await store.setJSON(`r/${id}`, existing);
-      return json({ ok: true, item: existing });
-    }
-
     if (req.method === 'DELETE') {
-      if (!id) return json({ ok: false, error: 'missing_id' }, 400);
-      const existing = await store.get(`r/${id}`, { type: 'json' });
-      if (!existing) return json({ ok: false, error: 'not_found' }, 404);
-      const botDelete = botSyncAuthorized(req);
-      if (!botDelete && Number(existing.user_id) !== Number(user.id)) return json({ ok: false, error: 'not_found' }, 404);
-      await store.delete(`r/${id}`);
-      await removeFromUserIndex(store, Number(existing.user_id), id);
-      await addTombstone(store, id);
-      return json({ ok: true, deleted: id });
+      const ok = await remove(body.id, auth.bot ? Number(body.user_id || 0) : auth.id, auth.bot);
+      return json({ ok: true, deleted: ok ? String(body.id) : null, not_found: !ok });
     }
 
-    if (botRequest || !user) return json({ ok: false, error: 'invalid_init_data' }, 401);
-    validate(body);
-    const item = {
-      ...body,
-      id: id || `r_${crypto.randomUUID().replaceAll('-', '').slice(0, 10)}`,
-      user_id: Number(user.id),
-      enabled: true,
-      source: 'miniapp_api',
-      updated_at: new Date().toISOString(),
-    };
-
-    if (id) {
-      const existing = await store.get(`r/${id}`, { type: 'json' });
-      if (existing && Number(existing.user_id) !== Number(user.id)) return json({ ok: false, error: 'forbidden' }, 403);
-    }
-
-    await removeTombstone(store, item.id);
-    await store.setJSON(`r/${item.id}`, item);
-    await addToUserIndex(store, Number(item.user_id), item.id);
-    return json({ ok: true, item });
+    return json({ ok: false, error: 'method_not_allowed' }, 405);
   } catch (e) {
-    console.error('reminders function error:', e);
+    console.error('reminders error:', e);
     return json({ ok: false, error: e.message || 'server_error' }, 500);
   }
 };

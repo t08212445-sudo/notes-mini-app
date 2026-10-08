@@ -39,6 +39,7 @@
       <div class="head-text">
         <h1 id="headTitle">Напоминалки</h1>
         <p class="head-sub" id="headSub">Активные напоминалки</p>
+        <div class="sync-status" id="syncStatus" aria-live="polite">Подключение…</div>
       </div>
       <button type="button" class="icon-btn" id="settingsBtn" aria-label="Настройки">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
@@ -66,10 +67,8 @@
   <section class="home-reminders" id="myRemindersSection">
     <div class="my-reminders-head">
       <div>
-        <div class="section-kicker">СИНХРОНИЗАЦИЯ</div>
         <h3>Мои напоминалки <span id="myRemindersCount">0</span></h3>
       </div>
-      <div id="syncStatus" class="sync-status loading">Подключение…</div>
     </div>
 
     <div class="my-reminders-list" id="myRemindersList"></div>

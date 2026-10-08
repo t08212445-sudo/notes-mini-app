@@ -116,8 +116,6 @@ body {
 }
 
 .screen {
-  position: relative;
-  z-index: 1;
   max-width: 480px;
   margin: 0 auto;
   padding: 20px 18px 8px;
@@ -159,6 +157,18 @@ body {
   -webkit-text-fill-color: transparent;
   color: transparent;
 }
+
+.sync-status {
+  margin-top: 2px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: var(--muted);
+  min-height: 14px;
+}
+.sync-status[data-state="loading"] { color: var(--accent); }
+.sync-status[data-state="ok"] { color: #73d39a; }
+.sync-status[data-state="error"] { color: #ff7d8d; }
 
 .head-sub {
   margin: 3px 0 0;
@@ -632,30 +642,14 @@ body::before, body::after {
 body::before { left: -110px; top: 90px; background: var(--accent); }
 body::after { right: -120px; top: 420px; background: var(--sunrise); }
 
-.ambient {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
-  opacity: .34;
-}
+.ambient { position: fixed; inset: 0; pointer-events: none; z-index: -3; opacity: .34; }
 .ambient::before, .ambient::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100vw;
-  height: 100vh;
-  border-radius: 0;
-  background-image: radial-gradient(circle, rgba(255,255,255,.72) 0 1px, transparent 1.8px);
-  background-size: 72px 72px;
-  background-position: 0 0;
+  content: ""; position: absolute; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,.65) 0 1px, transparent 2px);
+  background-size: 72px 72px; width: 100%; height: 100%;
 }
-.ambient-a { transform: rotate(11deg) scale(1.04); opacity: .34; }
-.ambient-b { transform: rotate(-7deg) scale(1.08); opacity: .18; }
+.ambient-a { transform: rotate(11deg); opacity: .34; }
+.ambient-b { transform: rotate(-7deg) scale(1.18); opacity: .18; }
 
 .hero-card {
   position: relative; min-height: 174px; overflow: hidden;
@@ -1205,35 +1199,3 @@ body::after { right: -120px; top: 420px; background: var(--sunrise); }
    (они были видны только ниже конца контента) */
 html { background: var(--bg); min-height: 100%; }
 body { background: transparent; min-height: 100vh; }
-
-/* v14 — clean final layer */
-.sync-status {
-  flex: none;
-  max-width: 132px;
-  padding: 6px 9px;
-  border: 1px solid var(--stroke);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--text-dim);
-  font-size: 9px;
-  font-weight: 800;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.sync-status.loading { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
-.sync-status.ok { color: #63d49a; border-color: rgba(99,212,154,.35); background: rgba(99,212,154,.09); }
-.sync-status.error { color: #ff7185; border-color: rgba(255,113,133,.35); background: rgba(255,113,133,.09); }
-.my-reminders-card, .home-reminders { width: 100%; }
-.my-reminders-head { min-width: 0; }
-.my-reminders-head > div:first-child { min-width: 0; }
-@media (max-width: 380px) {
-  .sync-status { max-width: 105px; font-size: 8px; }
-}
-/* Stars are a viewport layer, never a half-screen child of a content card. */
-.ambient, .ambient::before, .ambient::after { position: fixed !important; inset: 0 !important; width: 100vw !important; height: 100dvh !important; border-radius: 0 !important; }
-.ambient { z-index: 0 !important; overflow: visible !important; }
-.screen { z-index: 1; }
-.fab { z-index: 30 !important; }
-.sheet, .sheet-backdrop { z-index: 50 !important; }
