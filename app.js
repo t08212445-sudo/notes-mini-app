@@ -108,6 +108,32 @@
     return `${REMINDER_CACHE_PREFIX}${currentTelegramUserId || "unknown"}`;
   }
 
+  const PENDING_KEY = "notes_reminders_pending_v1";
+
+  function readPendingReminders() {
+    try {
+      const value = JSON.parse(localStorage.getItem(PENDING_KEY) || "{}");
+      return value && typeof value === "object" ? value : {};
+    } catch (_) { return {}; }
+  }
+
+  function writePendingReminders(value) {
+    try { localStorage.setItem(PENDING_KEY, JSON.stringify(value)); } catch (_) {}
+  }
+
+  function markPendingReminder(item) {
+    if (!item?.id) return;
+    const pending = readPendingReminders();
+    pending[String(item.id)] = { saved_at: Date.now(), item };
+    writePendingReminders(pending);
+  }
+
+  function clearPendingReminder(id) {
+    const pending = readPendingReminders();
+    delete pending[String(id)];
+    writePendingReminders(pending);
+  }
+
   function readReminderCache() {
     try {
       const value = JSON.parse(localStorage.getItem(reminderCacheKey()) || "[]");
@@ -126,18 +152,37 @@
     const next = { ...item, id: serverId, server_id: serverId, saved_at: Date.now() };
     const items = readReminderCache().filter((x) => (x.server_id || x.id) !== serverId);
     writeReminderCache([next, ...items]);
+    markPendingReminder(next);
   }
 
   function replaceReminderCache(items) {
-    const normalized = (Array.isArray(items) ? items : [])
+    const remote = (Array.isArray(items) ? items : [])
       .filter((x) => x?.id && x?.text && x?.time && x?.mode)
       .map((x) => ({ ...x, server_id: x.id }));
+
+    const now = Date.now();
+    const pending = readPendingReminders();
+    const merged = new Map(remote.map((x) => [String(x.id), x]));
+
+    // Protect a just-saved item from a temporarily stale GET response.
+    for (const [id, entry] of Object.entries(pending)) {
+      if (!entry?.item || now - Number(entry.saved_at || 0) > 120000) {
+        delete pending[id];
+        continue;
+      }
+      if (!merged.has(id)) merged.set(id, entry.item);
+      else delete pending[id];
+    }
+    writePendingReminders(pending);
+
+    const normalized = [...merged.values()];
     normalized.sort((a, b) => String(a.time).localeCompare(String(b.time)));
     writeReminderCache(normalized);
     renderReminderCache();
   }
 
   function removeCachedReminder(id) {
+    clearPendingReminder(id);
     writeReminderCache(readReminderCache().filter((x) => (x.server_id || x.id) !== id));
     renderReminderCache();
   }
@@ -192,7 +237,7 @@
         try {
           const response = await fetch("/.netlify/functions/reminders", {
             method: "DELETE",
-            headers: { "Content-Type": "application/json", "X-Telegram-Init-Data": tg?.initData || "" },
+            headers: apiHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify({ id }),
           });
           const data = await response.json().catch(() => ({}));
@@ -210,16 +255,31 @@
     });
   }
 
+  function getLaunchToken() {
+    try { return new URLSearchParams(location.search).get("launch") || ""; }
+    catch (_) { return ""; }
+  }
+
+  function apiHeaders(extra = {}) {
+    const headers = { ...extra };
+    const initData = tg?.initData || "";
+    const launchToken = getLaunchToken();
+    if (initData) headers["X-Telegram-Init-Data"] = initData;
+    if (launchToken) headers["X-MiniApp-Launch-Token"] = launchToken;
+    return headers;
+  }
+
   async function loadRemoteReminders() {
     const initData = tg?.initData || "";
-    if (!initData) {
-      console.warn("Telegram initData отсутствует: Mini App открыт не через Telegram WebApp.");
+    const launchToken = getLaunchToken();
+    if (!initData && !launchToken) {
+      console.warn("Нет Telegram initData и launch-токена. Откройте Mini App из Telegram.");
       renderReminderCache();
       return false;
     }
     try {
       const response = await fetch("/.netlify/functions/reminders", {
-        headers: { "X-Telegram-Init-Data": initData },
+        headers: apiHeaders(),
         cache: "no-store",
       });
       const data = await response.json().catch(() => ({}));
@@ -533,13 +593,11 @@
 
   async function saveViaApi(payload) {
     const initData = tg?.initData || "";
-    if (!initData) throw new Error("Telegram initData отсутствует");
+    const launchToken = getLaunchToken();
+    if (!initData && !launchToken) throw new Error("Mini App открыт вне Telegram. Откройте его через кнопку бота.");
     const response = await fetch("/.netlify/functions/reminders", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Telegram-Init-Data": initData,
-      },
+      headers: apiHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(payload),
     });
     const data = await response.json().catch(() => ({}));
@@ -667,5 +725,17 @@
   currentTelegramUserId = String(tg?.initDataUnsafe?.user?.id || "");
   renderReminderCache();
   loadRemoteReminders();
+
+  // Refresh when Telegram brings the Mini App back to the foreground and
+  // periodically while the home screen is open. This keeps phone/PC views
+  // aligned without relying on a manual reload.
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && !viewEditor.classList.contains("hidden")) return;
+    if (!document.hidden) loadRemoteReminders();
+  });
+  setInterval(() => {
+    if (!document.hidden && !viewHome.classList.contains("hidden")) loadRemoteReminders();
+  }, 15000);
+
   if (urlEditing && urlPrefill) openEditor(urlPrefill); else showHome();
 })();
