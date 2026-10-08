@@ -1,13 +1,27 @@
-# Netlify Mini App v12
+# Mini App v14
 
-Deploy the CONTENTS of this folder as the Netlify site.
+Deploy the **contents** of this folder as a Netlify site.
 
-Required environment variables:
-- `BOT_TOKEN` — current Telegram bot token (do not share it).
-- `SITE_URL` — optional, set to the exact Netlify site URL.
+Required environment variable:
+- `BOT_TOKEN` — token of the same Telegram bot.
 
-The Mini App saves only through `/.netlify/functions/reminders` using Telegram `initData`.
-`sendData()` is not used as a save fallback, because Menu/Open launches do not reliably deliver `web_app_data` to the bot.
+Optional:
+- `SITE_URL` — exact site URL.
 
-Cloud data is stored in Netlify Blobs store `notes-reminders`.
-The bot sync endpoint authenticates from the existing `BOT_TOKEN` and supports a two-way recovery flow: if Netlify is empty but the bot still has old Mini App reminders, the bot uploads them back to the cloud. Confirmed deletions are protected by tombstones so deleted reminders are not resurrected.
+The Mini App and bot use the same Netlify Blobs store: `notes-reminders`.
+
+## Storage model
+
+Each Telegram user has an index:
+- `u/<telegram_user_id>` — reminder IDs belonging to that user.
+- `r/<reminder_id>` — reminder itself.
+- `meta/users` — known Telegram user IDs.
+- `meta/deleted` — deletion tombstones preventing deleted reminders from being recreated by an old local copy.
+
+The old `store.list()` format is migrated automatically when the new user index does not exist yet.
+
+## Authentication
+
+Mini App requests use Telegram `initData` when available. Bot-generated Mini App URLs also contain a short-lived HMAC-signed launch token made with the existing `BOT_TOKEN`.
+
+No `MINIAPP_SYNC_SECRET` is required.

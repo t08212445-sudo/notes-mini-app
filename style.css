@@ -1205,3 +1205,35 @@ body::after { right: -120px; top: 420px; background: var(--sunrise); }
    (они были видны только ниже конца контента) */
 html { background: var(--bg); min-height: 100%; }
 body { background: transparent; min-height: 100vh; }
+
+/* v14 — clean final layer */
+.sync-status {
+  flex: none;
+  max-width: 132px;
+  padding: 6px 9px;
+  border: 1px solid var(--stroke);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-dim);
+  font-size: 9px;
+  font-weight: 800;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sync-status.loading { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.sync-status.ok { color: #63d49a; border-color: rgba(99,212,154,.35); background: rgba(99,212,154,.09); }
+.sync-status.error { color: #ff7185; border-color: rgba(255,113,133,.35); background: rgba(255,113,133,.09); }
+.my-reminders-card, .home-reminders { width: 100%; }
+.my-reminders-head { min-width: 0; }
+.my-reminders-head > div:first-child { min-width: 0; }
+@media (max-width: 380px) {
+  .sync-status { max-width: 105px; font-size: 8px; }
+}
+/* Stars are a viewport layer, never a half-screen child of a content card. */
+.ambient, .ambient::before, .ambient::after { position: fixed !important; inset: 0 !important; width: 100vw !important; height: 100dvh !important; border-radius: 0 !important; }
+.ambient { z-index: 0 !important; overflow: visible !important; }
+.screen { z-index: 1; }
+.fab { z-index: 30 !important; }
+.sheet, .sheet-backdrop { z-index: 50 !important; }

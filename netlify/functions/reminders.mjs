@@ -115,17 +115,113 @@ function authenticatedUser(req) {
   return verifyLaunchToken(req.headers.get('x-miniapp-launch-token'));
 }
 
-async function readAll() {
+async function readLegacyAll() {
   const store = getStore(STORE);
   const { blobs } = await store.list();
   const result = [];
   const deleted = [];
   for (const entry of blobs) {
     const item = await store.get(entry.key, { type: 'json' });
-    if (entry.key.startsWith('r/') && item && item.id && item.user_id) result.push(item);
+    if (entry.key.startsWith('r/') && item?.id && item?.user_id) result.push(item);
     if (entry.key.startsWith('d/') && item?.id) deleted.push(String(item.id));
   }
   return { reminders: result, deleted_ids: deleted };
+}
+
+async function readUserIds(store) {
+  const meta = await store.get('meta/users', { type: 'json' });
+  return Array.isArray(meta?.user_ids) ? meta.user_ids.map(Number).filter(Number.isSafeInteger) : [];
+}
+
+async function addUserId(store, userId) {
+  const ids = await readUserIds(store);
+  if (!ids.includes(Number(userId))) {
+    ids.push(Number(userId));
+    await store.setJSON('meta/users', { user_ids: ids });
+  }
+}
+
+async function readUserIndex(store, userId) {
+  const data = await store.get(`u/${Number(userId)}`, { type: 'json' });
+  return Array.isArray(data?.ids) ? data.ids.map(String) : [];
+}
+
+async function writeUserIndex(store, userId, ids) {
+  const unique = [...new Set(ids.map(String))];
+  await store.setJSON(`u/${Number(userId)}`, { user_id: Number(userId), ids: unique });
+}
+
+async function addToUserIndex(store, userId, reminderId) {
+  const ids = await readUserIndex(store, userId);
+  if (!ids.includes(String(reminderId))) ids.push(String(reminderId));
+  await writeUserIndex(store, userId, ids);
+  await addUserId(store, userId);
+}
+
+async function removeFromUserIndex(store, userId, reminderId) {
+  const ids = await readUserIndex(store, userId);
+  await writeUserIndex(store, userId, ids.filter((x) => x !== String(reminderId)));
+}
+
+async function readUserReminders(store, userId) {
+  let ids = await readUserIndex(store, userId);
+  const result = [];
+  const missing = [];
+  for (const id of ids) {
+    const item = await store.get(`r/${id}`, { type: 'json' });
+    if (item?.id && Number(item.user_id) === Number(userId)) result.push(item);
+    else missing.push(id);
+  }
+  if (missing.length) await writeUserIndex(store, userId, ids.filter((id) => !missing.includes(id)));
+  return result;
+}
+
+async function readAll() {
+  const store = getStore(STORE);
+  const userIds = await readUserIds(store);
+  const reminders = [];
+  const seen = new Set();
+  for (const userId of userIds) {
+    const items = await readUserReminders(store, userId);
+    for (const item of items) {
+      if (!seen.has(String(item.id))) {
+        seen.add(String(item.id));
+        reminders.push(item);
+      }
+    }
+  }
+
+  // Однократная миграция старого формата, где единственным индексом был store.list().
+  if (!userIds.length) {
+    const legacy = await readLegacyAll();
+    for (const item of legacy.reminders) {
+      await store.setJSON(`r/${String(item.id)}`, item);
+      await addToUserIndex(store, Number(item.user_id), String(item.id));
+      reminders.push(item);
+    }
+    return { reminders, deleted_ids: legacy.deleted_ids };
+  }
+
+  const deletedMeta = await store.get('meta/deleted', { type: 'json' });
+  return {
+    reminders,
+    deleted_ids: Array.isArray(deletedMeta?.ids) ? deletedMeta.ids.map(String) : [],
+  };
+}
+
+async function addTombstone(store, reminderId) {
+  const meta = await store.get('meta/deleted', { type: 'json' });
+  const ids = Array.isArray(meta?.ids) ? meta.ids.map(String) : [];
+  const rid = String(reminderId);
+  if (!ids.includes(rid)) ids.push(rid);
+  // Храним только разумное количество последних удалений.
+  await store.setJSON('meta/deleted', { ids: ids.slice(-2000) });
+}
+
+async function removeTombstone(store, reminderId) {
+  const meta = await store.get('meta/deleted', { type: 'json' });
+  const ids = Array.isArray(meta?.ids) ? meta.ids.map(String) : [];
+  await store.setJSON('meta/deleted', { ids: ids.filter((x) => x !== String(reminderId)) });
 }
 
 function validate(payload) {
@@ -174,7 +270,8 @@ export default async (req) => {
       if (!incoming?.id || !incoming?.user_id) return json({ ok: false, error: 'invalid_item' }, 400);
       const rid = String(incoming.id).slice(0, 64);
       const existing = await store.get(`r/${rid}`, { type: 'json' });
-      const tombstone = await store.get(`d/${rid}`, { type: 'json' });
+      const deletedMeta = await store.get('meta/deleted', { type: 'json' });
+      const tombstone = Array.isArray(deletedMeta?.ids) && deletedMeta.ids.map(String).includes(rid);
       if (tombstone && !existing) return json({ ok: true, skipped: 'deleted' });
       const item = { ...incoming, id: rid, user_id: Number(incoming.user_id), source: 'miniapp_api' };
       if (existing) {
@@ -184,8 +281,9 @@ export default async (req) => {
         item.last_sent = existing.last_sent ?? item.last_sent ?? null;
         item.delivery_key = existing.delivery_key ?? item.delivery_key ?? null;
       }
-      await store.delete(`d/${rid}`);
+      await removeTombstone(store, rid);
       await store.setJSON(`r/${rid}`, item);
+      await addToUserIndex(store, Number(item.user_id), rid);
       return json({ ok: true, item });
     }
 
@@ -212,7 +310,8 @@ export default async (req) => {
       const botDelete = botSyncAuthorized(req);
       if (!botDelete && Number(existing.user_id) !== Number(user.id)) return json({ ok: false, error: 'not_found' }, 404);
       await store.delete(`r/${id}`);
-      await store.setJSON(`d/${id}`, { id: String(id), deleted_at: new Date().toISOString() });
+      await removeFromUserIndex(store, Number(existing.user_id), id);
+      await addTombstone(store, id);
       return json({ ok: true, deleted: id });
     }
 
@@ -232,7 +331,9 @@ export default async (req) => {
       if (existing && Number(existing.user_id) !== Number(user.id)) return json({ ok: false, error: 'forbidden' }, 403);
     }
 
+    await removeTombstone(store, item.id);
     await store.setJSON(`r/${item.id}`, item);
+    await addToUserIndex(store, Number(item.user_id), item.id);
     return json({ ok: true, item });
   } catch (e) {
     console.error('reminders function error:', e);

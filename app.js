@@ -243,6 +243,7 @@
           const data = await response.json().catch(() => ({}));
           if (!response.ok || !data.ok) throw new Error(data.error || `API ${response.status}`);
           removeCachedReminder(id);
+          setSyncStatus("ok", "Удалено на сервере");
           tg?.HapticFeedback?.notificationOccurred("success");
         } catch (err) {
           console.error("Delete reminder failed", err);
@@ -273,12 +274,14 @@
     const initData = tg?.initData || "";
     const launchToken = getLaunchToken();
     if (!initData && !launchToken) {
-      console.warn("Нет Telegram initData и launch-токена. Откройте Mini App из Telegram.");
+      setSyncStatus("error", "Нет связи с Telegram");
       renderReminderCache();
       return false;
     }
+    setSyncStatus("loading", "Синхронизация…");
     try {
       const response = await fetch("/.netlify/functions/reminders", {
+        method: "GET",
         headers: apiHeaders(),
         cache: "no-store",
       });
@@ -287,9 +290,11 @@
       currentTelegramUserId = String(data.user_id || tg?.initDataUnsafe?.user?.id || "");
       if (!currentTelegramUserId) throw new Error("Telegram user_id отсутствует");
       replaceReminderCache(data.reminders || []);
+      setSyncStatus("ok", `Синхронизировано · ${data.reminders?.length || 0}`);
       return true;
     } catch (err) {
-      console.warn("Не удалось загрузить напоминания пользователя", err);
+      console.error("Не удалось загрузить напоминания пользователя", err);
+      setSyncStatus("error", "Нет связи с сервером");
       renderReminderCache();
       return false;
     }
@@ -302,6 +307,13 @@
   const viewHome = document.getElementById("viewHome");
   const viewEditor = document.getElementById("viewEditor");
   const fabAdd = document.getElementById("fabAdd");
+  const syncStatus = document.getElementById("syncStatus");
+
+  function setSyncStatus(kind, text) {
+    if (!syncStatus) return;
+    syncStatus.className = `sync-status ${kind}`;
+    syncStatus.textContent = text;
+  }
 
   // ==================================================================
   // Колесо выбора времени — настоящее циклическое колесо без «прыжков».
@@ -697,6 +709,7 @@
       currentTelegramUserId = currentTelegramUserId || String(tg?.initDataUnsafe?.user?.id || "");
       cacheReminder(saved || payload);
       renderReminderCache();
+      setSyncStatus("ok", "Сохранено на сервере");
       tg?.HapticFeedback?.notificationOccurred("success");
       if (tg?.MainButton) tg.MainButton.hideProgress();
       if (fb) fb.textContent = editing ? "Изменения сохранены ✓" : "Сохранено ✓";
