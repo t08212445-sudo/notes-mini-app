@@ -158,18 +158,6 @@ body {
   color: transparent;
 }
 
-.sync-status {
-  margin-top: 2px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .02em;
-  color: var(--muted);
-  min-height: 14px;
-}
-.sync-status[data-state="loading"] { color: var(--accent); }
-.sync-status[data-state="ok"] { color: #73d39a; }
-.sync-status[data-state="error"] { color: #ff7d8d; }
-
 .head-sub {
   margin: 3px 0 0;
   font-size: 13px;

@@ -91,15 +91,19 @@
   }
 
   const params = new URLSearchParams(location.search);
-const launchToken = params.get("launch") || "";
-function apiHeaders(extra = {}) {
-  const headers = { ...extra };
-  if (tg?.initData) headers["X-Telegram-Init-Data"] = tg.initData;
-  if (launchToken) headers["X-MiniApp-Launch"] = launchToken;
-  return headers;
-}
-
+  const launchToken = params.get("launch") || "";
   const urlEditing = params.get("mode") === "edit";
+
+  function launchUserId(token) {
+    try {
+      const encoded = String(token).split(".")[0];
+      if (!encoded) return "";
+      let s = encoded.replace(/-/g, "+").replace(/_/g, "/");
+      while (s.length % 4) s += "=";
+      const payload = JSON.parse(new TextDecoder("utf-8").decode(Uint8Array.from(atob(s), c => c.charCodeAt(0))));
+      return payload?.uid ? String(payload.uid) : "";
+    } catch (_) { return ""; }
+  }
   let editing = false;
   let prefill = null;
   let urlPrefill = null;
@@ -150,13 +154,6 @@ function apiHeaders(extra = {}) {
     renderReminderCache();
   }
 
-  function setSyncStatus(text, state = "") {
-    const el = document.getElementById("syncStatus");
-    if (!el) return;
-    el.textContent = text;
-    el.dataset.state = state;
-  }
-
   function formatSchedule(item) {
     if (item.mode === "once") {
       return item.date ? `Разово · ${item.date.split("-").reverse().join(".")}` : "Разово";
@@ -205,21 +202,18 @@ function apiHeaders(extra = {}) {
         const id = item.server_id || item.id;
         deleteBtn.disabled = true; deleteBtn.textContent = "Удаляем…";
         try {
-          setSyncStatus("Удаляем…", "loading");
           const response = await fetch("/.netlify/functions/reminders", {
             method: "DELETE",
-            headers: apiHeaders({ "Content-Type": "application/json" }),
+            headers: { "Content-Type": "application/json", "X-Telegram-Init-Data": tg?.initData || "", "X-Launch-Token": launchToken },
             body: JSON.stringify({ id }),
           });
           const data = await response.json().catch(() => ({}));
           if (!response.ok || !data.ok) throw new Error(data.error || `API ${response.status}`);
           removeCachedReminder(id);
-          setSyncStatus(`Синхронизировано · ${readReminderCache().length}`, "ok");
           tg?.HapticFeedback?.notificationOccurred("success");
         } catch (err) {
           console.error("Delete reminder failed", err);
           deleteBtn.disabled = false; deleteBtn.textContent = "Убрать";
-          setSyncStatus("Не удалось удалить", "error");
           alert("Не удалось удалить напоминание.");
         }
       });
@@ -229,16 +223,15 @@ function apiHeaders(extra = {}) {
   }
 
   async function loadRemoteReminders() {
-    if (!tg?.initData && !launchToken) {
-      setSyncStatus("Нет связи с Telegram", "error");
+    const initData = tg?.initData || "";
+    if (!initData && !launchToken) {
       console.warn("Нет Telegram initData и launch-токена.");
       renderReminderCache();
       return false;
     }
-    setSyncStatus("Синхронизация…", "loading");
     try {
       const response = await fetch("/.netlify/functions/reminders", {
-        headers: apiHeaders(),
+        headers: { "X-Telegram-Init-Data": initData, "X-Launch-Token": launchToken },
         cache: "no-store",
       });
       const data = await response.json().catch(() => ({}));
@@ -246,10 +239,8 @@ function apiHeaders(extra = {}) {
       currentTelegramUserId = String(data.user_id || tg?.initDataUnsafe?.user?.id || "");
       if (!currentTelegramUserId) throw new Error("Telegram user_id отсутствует");
       replaceReminderCache(data.reminders || []);
-      setSyncStatus(`Синхронизировано · ${data.reminders?.length || 0}`, "ok");
       return true;
     } catch (err) {
-      setSyncStatus("Ошибка связи с сервером", "error");
       console.warn("Не удалось загрузить напоминания пользователя", err);
       renderReminderCache();
       return false;
@@ -553,10 +544,15 @@ function apiHeaders(extra = {}) {
   }
 
   async function saveViaApi(payload) {
-    if (!tg?.initData && !launchToken) throw new Error("Не удалось определить пользователя Telegram");
+    const initData = tg?.initData || "";
+    if (!initData && !launchToken) throw new Error("Не удалось определить Telegram-пользователя");
     const response = await fetch("/.netlify/functions/reminders", {
       method: "POST",
-      headers: apiHeaders({ "Content-Type": "application/json" }),
+      headers: {
+        "Content-Type": "application/json",
+        "X-Telegram-Init-Data": initData,
+        "X-Launch-Token": launchToken,
+      },
       body: JSON.stringify(payload),
     });
     const data = await response.json().catch(() => ({}));
@@ -578,7 +574,7 @@ function apiHeaders(extra = {}) {
     headTitle.textContent = "Напоминалки";
     headSub.textContent = "Активные напоминалки";
     try { tg?.BackButton?.hide(); } catch (_) {}
-    if (location.search) history.replaceState(null, "", location.pathname + (launchToken ? `?launch=${encodeURIComponent(launchToken)}` : ""));
+    if (location.search) history.replaceState(null, "", location.pathname);
     renderReminderCache();
     window.scrollTo({ top: 0 });
   }
@@ -636,7 +632,6 @@ function apiHeaders(extra = {}) {
 
     const payload = buildPayload();
     saving = true;
-    setSyncStatus("Сохраняем…", "loading");
 
     if (tg?.MainButton) {
       tg.MainButton.showProgress();
@@ -654,10 +649,9 @@ function apiHeaders(extra = {}) {
     // Telegram не обязан передавать web_app_data обратно боту.
     try {
       const saved = await saveViaApi(payload);
-      currentTelegramUserId = currentTelegramUserId || String(tg?.initDataUnsafe?.user?.id || "");
+      currentTelegramUserId = currentTelegramUserId || String(tg?.initDataUnsafe?.user?.id || launchUserId(launchToken) || "");
       cacheReminder(saved || payload);
       renderReminderCache();
-      setSyncStatus(`Сохранено · ${readReminderCache().length}`, "ok");
       tg?.HapticFeedback?.notificationOccurred("success");
       if (tg?.MainButton) tg.MainButton.hideProgress();
       if (fb) fb.textContent = editing ? "Изменения сохранены ✓" : "Сохранено ✓";
@@ -666,7 +660,6 @@ function apiHeaders(extra = {}) {
     } catch (apiError) {
       console.error("Mini App API save failed", apiError);
       resetSaveState();
-      setSyncStatus("Ошибка сохранения", "error");
       tg?.HapticFeedback?.notificationOccurred("error");
       alert(`Не удалось сохранить напоминание.\n\n${apiError?.message || "Ошибка API"}`);
     }
@@ -684,7 +677,7 @@ function apiHeaders(extra = {}) {
   tg?.MainButton?.hide();
 
   applyTheme();
-  currentTelegramUserId = String(tg?.initDataUnsafe?.user?.id || "");
+  currentTelegramUserId = String(tg?.initDataUnsafe?.user?.id || launchUserId(launchToken) || "");
   renderReminderCache();
   loadRemoteReminders();
   if (urlEditing && urlPrefill) openEditor(urlPrefill); else showHome();
